@@ -1593,7 +1593,6 @@ let multiplayer = {
     gameId: null,
     playerId: null,
     playerNumber: null,
-    opponentNumber: null,
     isHost: false,
     gameRef: null,
     boardStateRef: null,
@@ -1602,342 +1601,7 @@ let multiplayer = {
 };
 
 // ============================================================================
-// GAME STATE
-// ============================================================================
-let decks = { 1: [], 2: [] };
-let hands = { 1: [], 2: [] };
-let graveyards = { 1: [], 2: [] };
-let boardCards = [];
-let counterTokens = { 1: [], 2: [] };
-let lifeZones = { 1: Array(5).fill(null), 2: Array(5).fill(null) };
-let currentZoomImage = "";
-let currentZoomSource = null;
-let cardToDelete = null;
-
-let dragState = {
-    isDragging: false,
-    card: null,
-    originalCard: null,
-    originalParent: null,
-    originalLeft: 0,
-    originalTop: 0,
-    ghostCard: null,
-    startX: 0,
-    startY: 0,
-    mouseDownTime: 0,
-    clickThreshold: 200,
-    lastDraggedCard: null,
-    draggingToken: false
-};
-
-let quantitySelectorState = {
-    image: "",
-    category: "",
-    quantity: 1
-};
-
-let currentShopCategory = 'all';
-let currentShopImage = null;
-
-const CARD_CATEGORIES = {
-    avatar: {
-        name: "Avatar",
-        folder: "Taling/Avatar/",
-        prefix: "avatar",
-        count: 484,
-        color: "#4A90E2"
-    },
-    magic: {
-        name: "Magic",
-        folder: "Taling/Magic/",
-        prefix: "magic",
-        count: 219,
-        color: "#9013FE"
-    },
-    construct: {
-        name: "Construct",
-        folder: "Taling/Construct/",
-        prefix: "con",
-        count: 18,
-        color: "#F5A623"
-    },
-    life: {
-        name: "Life",
-        folder: "Taling/Life/",
-        prefix: "life",
-        count: 48,
-        color: "#7ED321"
-    }
-};
-
-const TOKEN_COLORS = {
-    1: ['#ff6b6b', '#4ecdc4', '#ffe66d', '#95e1d3'],
-    2: ['#ff9a76', '#a8e6cf', '#ffd3b6', '#a8d8ea']
-};
-
-const TOKEN_LABELS = ['Health', 'Mana', 'Attack', 'Defense'];
-
-const IMAGE_EXT = ".png";
-let allShopCards = [];
-
-// ============================================================================
-// MULTIPLAYER FUNCTIONS
-// ============================================================================
-function showMultiplayerMenu() {
-    document.getElementById('multiplayerOverlay').style.display = 'flex';
-}
-
-function closeMultiplayerMenu() {
-    document.getElementById('multiplayerOverlay').style.display = 'none';
-}
-
-function createGame() {
-    if (!database) {
-        showNotification("Firebase Error", "Database not initialized", "error");
-        return;
-    }
-    
-    multiplayer.playerId = 'player_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    multiplayer.playerNumber = 1;
-    multiplayer.opponentNumber = 2;
-    multiplayer.isHost = true;
-    
-    multiplayer.gameId = generateGameCode();
-    
-    document.getElementById('createGameSection').style.display = 'none';
-    document.getElementById('joinGameSection').style.display = 'none';
-    document.getElementById('gameInfoSection').style.display = 'block';
-    document.getElementById('displayGameCode').textContent = multiplayer.gameId;
-    
-    multiplayer.gameRef = database.ref('games/' + multiplayer.gameId);
-    multiplayer.boardStateRef = database.ref('boardStates/' + multiplayer.gameId);
-    
-    const initialGameState = getGameStateForSync();
-    
-    multiplayer.gameRef.set({
-        hostId: multiplayer.playerId,
-        players: {
-            [multiplayer.playerId]: {
-                playerNumber: 1,
-                name: "Player 1",
-                connected: true,
-                lastSeen: Date.now()
-            }
-        },
-        chat: [],
-        createdAt: Date.now(),
-        status: 'waiting'
-    }).then(() => {
-        multiplayer.boardStateRef.set(initialGameState);
-        
-        multiplayer.gameRef.on('value', handleGameUpdate);
-        multiplayer.boardStateRef.on('value', handleBoardStateUpdate);
-        
-        showNotification('Game Created!', `Share code: ${multiplayer.gameId}`, 'success');
-        
-        const multiplayerBtn = document.getElementById('multiplayerButton');
-        multiplayerBtn.textContent = '🌐 Room: ' + multiplayer.gameId;
-        multiplayerBtn.style.background = 'linear-gradient(145deg, #4CAF50, #388E3C)';
-    });
-}
-
-function joinGame() {
-    const code = document.getElementById('gameCodeInput').value.trim().toUpperCase();
-    if (!code || code.length !== 6) {
-        showNotification('Invalid Code', 'Please enter a 6-digit code', 'error');
-        return;
-    }
-    
-    if (!database) {
-        showNotification("Firebase Error", "Database not initialized", "error");
-        return;
-    }
-    
-    multiplayer.playerId = 'player_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    multiplayer.playerNumber = 2;
-    multiplayer.opponentNumber = 1;
-    multiplayer.isHost = false;
-    multiplayer.gameId = code;
-    
-    multiplayer.gameRef = database.ref('games/' + code);
-    multiplayer.boardStateRef = database.ref('boardStates/' + code);
-    
-    multiplayer.gameRef.once('value').then((snapshot) => {
-        if (!snapshot.exists()) {
-            showNotification('Game Not Found', 'Check the code and try again', 'error');
-            return;
-        }
-        
-        const gameData = snapshot.val();
-        const players = gameData.players || {};
-        const playerCount = Object.keys(players).length;
-        
-        if (playerCount >= 2) {
-            showNotification('Game Full', 'This game already has 2 players', 'error');
-            return;
-        }
-        
-        return multiplayer.gameRef.update({
-            [`players/${multiplayer.playerId}`]: {
-                playerNumber: 2,
-                name: "Player 2",
-                connected: true,
-                lastSeen: Date.now()
-            },
-            lastUpdate: Date.now(),
-            status: 'playing'
-        });
-    }).then(() => {
-        document.getElementById('createGameSection').style.display = 'none';
-        document.getElementById('joinGameSection').style.display = 'none';
-        document.getElementById('gameInfoSection').style.display = 'block';
-        document.getElementById('displayGameCode').textContent = code;
-        
-        multiplayer.gameRef.on('value', handleGameUpdate);
-        multiplayer.boardStateRef.on('value', handleBoardStateUpdate);
-        
-        showNotification('Joined Game!', 'Connected to host', 'success');
-        
-        const multiplayerBtn = document.getElementById('multiplayerButton');
-        multiplayerBtn.textContent = '🌐 Room: ' + multiplayer.gameId;
-        multiplayerBtn.style.background = 'linear-gradient(145deg, #2196F3, #1976D2)';
-        
-        multiplayer.boardStateRef.once('value').then((snapshot) => {
-            if (snapshot.exists()) {
-                syncGameStateFromFirebase(snapshot.val());
-            }
-        });
-    });
-}
-
-function handleGameUpdate(snapshot) {
-    if (!snapshot.exists()) {
-        if (multiplayer.gameId) {
-            showNotification('Game Ended', 'Host left the game', 'warning');
-            leaveGame();
-        }
-        return;
-    }
-    
-    const gameData = snapshot.val();
-    
-    const playerList = document.getElementById('playerList');
-    if (playerList) {
-        playerList.innerHTML = '';
-        Object.entries(gameData.players || {}).forEach(([playerId, player]) => {
-            const badgeClass = player.playerNumber === 1 ? 'player1-badge' : 'player2-badge';
-            const youText = player.playerNumber === multiplayer.playerNumber ? ' (You)' : '';
-            playerList.innerHTML += `<div class="player-badge ${badgeClass}">Player ${player.playerNumber}${youText} ✅</div>`;
-        });
-    }
-    
-    if (gameData.chat) {
-        const chatContainer = document.getElementById('chatMessages');
-        if (chatContainer) {
-            chatContainer.innerHTML = '';
-            Object.values(gameData.chat).forEach(msg => {
-                const msgDiv = document.createElement('div');
-                msgDiv.innerHTML = `<strong>Player ${msg.sender}:</strong> ${msg.text}`;
-                msgDiv.style.margin = '5px 0';
-                msgDiv.style.padding = '8px';
-                msgDiv.style.background = msg.sender === multiplayer.playerNumber ? 'rgba(33, 150, 243, 0.2)' : 'rgba(255, 255, 255, 0.1)';
-                msgDiv.style.borderRadius = '10px';
-                chatContainer.appendChild(msgDiv);
-            });
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-    }
-}
-
-function handleBoardStateUpdate(snapshot) {
-    if (!snapshot.exists() || !multiplayer.gameId || multiplayer.isSyncing) return;
-    
-    const boardState = snapshot.val();
-    
-    if (boardState.lastUpdatePlayer === multiplayer.playerNumber) {
-        return;
-    }
-    
-    if (boardState.timestamp > multiplayer.lastSyncTime) {
-        multiplayer.lastSyncTime = boardState.timestamp;
-        syncGameStateFromFirebase(boardState);
-        
-        if (boardState.lastUpdatePlayer && boardState.lastUpdatePlayer !== multiplayer.playerNumber) {
-            showNotification(`Player ${boardState.lastUpdatePlayer}`, 'Updated the board', 'info', 2000);
-        }
-    }
-}
-
-function sendChatMessage() {
-    const input = document.getElementById('chatInput');
-    const message = input.value.trim();
-    
-    if (!message || !multiplayer.gameRef) return;
-    
-    const chatMessage = {
-        sender: multiplayer.playerNumber,
-        text: message,
-        timestamp: Date.now()
-    };
-    
-    multiplayer.gameRef.child('chat').push(chatMessage);
-    input.value = '';
-}
-
-function copyGameCode() {
-    if (!multiplayer.gameId) return;
-    navigator.clipboard.writeText(multiplayer.gameId);
-    showNotification('Copied!', 'Game code copied', 'success');
-}
-
-function copyGameLink() {
-    if (!multiplayer.gameId) return;
-    const link = window.location.href.split('?')[0] + '?game=' + multiplayer.gameId;
-    navigator.clipboard.writeText(link);
-    showNotification('Copied!', 'Invite link copied', 'success');
-}
-
-function leaveGame() {
-    if (multiplayer.gameRef) {
-        multiplayer.gameRef.child('players/' + multiplayer.playerId).remove();
-        multiplayer.gameRef.off();
-        multiplayer.boardStateRef.off();
-    }
-    
-    multiplayer = {
-        gameId: null,
-        playerId: null,
-        playerNumber: null,
-        opponentNumber: null,
-        isHost: false,
-        gameRef: null,
-        boardStateRef: null,
-        lastSyncTime: 0,
-        isSyncing: false
-    };
-    
-    document.getElementById('createGameSection').style.display = 'block';
-    document.getElementById('joinGameSection').style.display = 'block';
-    document.getElementById('gameInfoSection').style.display = 'none';
-    
-    const multiplayerBtn = document.getElementById('multiplayerButton');
-    multiplayerBtn.textContent = '🌐 Online Play';
-    multiplayerBtn.style.background = 'linear-gradient(145deg, #2196F3, #1976D2)';
-    
-    showNotification('Left Game', 'You have left the game', 'info');
-}
-
-function generateGameCode() {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let result = '';
-    for (let i = 0; i < 6; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
-}
-
-// ============================================================================
-// SYNC FUNCTIONS
+// SYNC FUNCTIONS - FIXED VERSION
 // ============================================================================
 function getGameStateForSync() {
     const boardCardsData = boardCards.map(card => ({
@@ -1947,7 +1611,8 @@ function getGameStateForSync() {
         x: parseFloat(card.element?.style.left) || 0,
         y: parseFloat(card.element?.style.top) || 0,
         rotated: card.rotated || false,
-        color: card.color
+        color: card.color,
+        isOpponent: card.isOpponent || false
     }));
     
     const tokensData = {};
@@ -1958,7 +1623,8 @@ function getGameStateForSync() {
             label: token.label || 'Token',
             color: token.color,
             x: token.position?.x || 0,
-            y: token.position?.y || 0
+            y: token.position?.y || 0,
+            player: token.player
         }));
     });
     
@@ -1974,29 +1640,6 @@ function getGameStateForSync() {
     };
 }
 
-function syncGameStateToFirebase() {
-    if (!multiplayer.boardStateRef || multiplayer.isSyncing) return;
-    
-    multiplayer.isSyncing = true;
-    
-    try {
-        const gameState = getGameStateForSync();
-        multiplayer.boardStateRef.set(gameState)
-            .then(() => {
-                console.log("✅ Game state synced to Firebase");
-            })
-            .catch(error => {
-                console.error("❌ Sync error:", error);
-            })
-            .finally(() => {
-                multiplayer.isSyncing = false;
-            });
-    } catch (error) {
-        console.error("❌ Error getting game state:", error);
-        multiplayer.isSyncing = false;
-    }
-}
-
 function syncGameStateFromFirebase(firebaseState) {
     if (multiplayer.isSyncing) return;
     
@@ -2005,14 +1648,16 @@ function syncGameStateFromFirebase(firebaseState) {
     try {
         const ourPlayer = multiplayer.playerNumber;
         
+        // Remove opponent's cards that we previously rendered
         document.querySelectorAll('.board-card').forEach(el => {
             const cardId = el.id;
             const card = boardCards.find(c => c.id === cardId);
-            if (card && card.player !== ourPlayer) {
+            if (card && card.player !== ourPlayer && !card.isOpponent) {
                 el.remove();
             }
         });
         
+        // Remove opponent's tokens that we previously rendered
         document.querySelectorAll('.counter-token').forEach(el => {
             const tokenId = el.id;
             let found = false;
@@ -2028,12 +1673,14 @@ function syncGameStateFromFirebase(firebaseState) {
             }
         });
         
-        boardCards = boardCards.filter(card => card.player === ourPlayer);
+        // Keep only our own cards and opponent-marked cards
+        boardCards = boardCards.filter(card => card.player === ourPlayer || card.isOpponent);
         
         Object.keys(counterTokens).forEach(player => {
             counterTokens[player] = counterTokens[player].filter(token => token.player === ourPlayer);
         });
         
+        // Update local state from Firebase
         if (firebaseState.decks) {
             decks = JSON.parse(JSON.stringify(firebaseState.decks));
             updateDeckVisual(1);
@@ -2042,105 +1689,147 @@ function syncGameStateFromFirebase(firebaseState) {
         
         if (firebaseState.hands) {
             hands = JSON.parse(JSON.stringify(firebaseState.hands));
+            updateCounters();
         }
         
         if (firebaseState.graveyards) {
             graveyards = JSON.parse(JSON.stringify(firebaseState.graveyards));
+            updateCounters();
         }
         
         if (firebaseState.boardCards) {
             firebaseState.boardCards.forEach(cardData => {
+                // Skip our own cards (we already have them locally)
                 if (cardData.player === ourPlayer) return;
                 
                 const cardId = cardData.id;
-                const player = cardData.player;
                 
-                if (!document.getElementById(cardId)) {
-                    const playerArea = document.getElementById(`player${player}Area`);
-                    if (!playerArea) return;
-                    
-                    const cardElement = document.createElement("div");
-                    cardElement.className = "board-card";
-                    cardElement.id = cardId;
-                    cardElement.style.backgroundImage = `url('${cardData.image}')`;
-                    cardElement.style.left = `${cardData.x}px`;
-                    cardElement.style.top = `${cardData.y}px`;
-                    cardElement.style.borderColor = cardData.color || "#555";
-                    cardElement.style.borderWidth = "3px";
-                    
-                    if (cardData.rotated) {
-                        cardElement.classList.add('rotated');
+                // If card already exists, update its position
+                const existingCardIndex = boardCards.findIndex(c => c.id === cardId);
+                if (existingCardIndex > -1) {
+                    const existingCard = boardCards[existingCardIndex];
+                    if (existingCard.element) {
+                        existingCard.element.style.left = `${cardData.x}px`;
+                        existingCard.element.style.top = `${cardData.y}px`;
+                        existingCard.rotated = cardData.rotated || false;
+                        
+                        if (cardData.rotated) {
+                            existingCard.element.classList.add('rotated');
+                        } else {
+                            existingCard.element.classList.remove('rotated');
+                        }
                     }
-                    
-                    cardElement.style.cursor = 'default';
-                    cardElement.title = "Opponent's card";
-                    
-                    cardElement.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        showCardZoom(cardData.image, { 
-                            type: 'board', 
-                            player: player, 
-                            cardId: cardId,
-                            isOpponent: true 
-                        });
-                    });
-                    
-                    playerArea.appendChild(cardElement);
-                    
-                    boardCards.push({
-                        id: cardId,
-                        image: cardData.image,
-                        player: player,
-                        element: cardElement,
-                        color: cardData.color,
-                        rotated: cardData.rotated || false,
-                        isOpponent: true
-                    });
+                    return;
                 }
+                
+                // Create new card for opponent
+                const playerArea = document.getElementById(`player${cardData.player}Area`);
+                if (!playerArea) return;
+                
+                const cardElement = document.createElement("div");
+                cardElement.className = "board-card";
+                cardElement.id = cardId;
+                cardElement.style.backgroundImage = `url('${cardData.image}')`;
+                cardElement.style.left = `${cardData.x}px`;
+                cardElement.style.top = `${cardData.y}px`;
+                
+                if (cardData.color) {
+                    cardElement.style.borderColor = cardData.color;
+                    cardElement.style.borderWidth = "3px";
+                }
+                
+                if (cardData.rotated) {
+                    cardElement.classList.add('rotated');
+                }
+                
+                cardElement.style.cursor = 'default';
+                cardElement.title = "Opponent's card";
+                
+                cardElement.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    showCardZoom(cardData.image, { 
+                        type: 'board', 
+                        player: cardData.player, 
+                        cardId: cardId,
+                        isOpponent: true 
+                    });
+                });
+                
+                playerArea.appendChild(cardElement);
+                
+                boardCards.push({
+                    id: cardId,
+                    image: cardData.image,
+                    player: cardData.player,
+                    element: cardElement,
+                    color: cardData.color,
+                    rotated: cardData.rotated || false,
+                    isOpponent: true
+                });
             });
         }
         
         if (firebaseState.counterTokens) {
             Object.keys(firebaseState.counterTokens).forEach(player => {
                 const playerNum = parseInt(player);
+                
+                // Only sync opponent's tokens, our tokens are managed locally
                 if (playerNum === ourPlayer) return;
                 
                 firebaseState.counterTokens[player].forEach(tokenData => {
                     const tokenId = tokenData.id;
                     
-                    if (!document.getElementById(tokenId)) {
-                        const playerArea = document.getElementById(`player${playerNum}Area`);
-                        if (!playerArea) return;
+                    // Update existing token
+                    const existingTokenIndex = counterTokens[playerNum]?.findIndex(t => t.id === tokenId);
+                    if (existingTokenIndex > -1) {
+                        const token = counterTokens[playerNum][existingTokenIndex];
+                        token.value = tokenData.value || 0;
+                        token.position = { x: tokenData.x || 0, y: tokenData.y || 0 };
                         
-                        const tokenIndex = counterTokens[playerNum].length;
-                        const tokenColor = TOKEN_COLORS[playerNum][tokenIndex % 4];
-                        
-                        const token = document.createElement("div");
-                        token.className = `counter-token token-p${playerNum}-${(tokenIndex % 4) + 1}`;
-                        token.id = tokenId;
-                        token.style.left = `${tokenData.x || 0}px`;
-                        token.style.top = `${tokenData.y || 0}px`;
-                        token.style.cursor = 'default';
-                        token.title = "Opponent's token";
-                        
-                        token.innerHTML = `
-                            <div class="counter-value">${tokenData.value || 0}</div>
-                            <div class="counter-label">${tokenData.label || 'Token'}</div>
-                        `;
-                        
-                        playerArea.appendChild(token);
-                        
-                        counterTokens[playerNum].push({
-                            id: tokenId,
-                            player: playerNum,
-                            value: tokenData.value || 0,
-                            label: tokenData.label || 'Token',
-                            color: tokenColor,
-                            element: token,
-                            position: { x: tokenData.x || 0, y: tokenData.y || 0 },
-                            isOpponent: true
-                        });
+                        if (token.element) {
+                            token.element.querySelector('.counter-value').textContent = tokenData.value || 0;
+                            token.element.style.left = `${tokenData.x}px`;
+                            token.element.style.top = `${tokenData.y}px`;
+                        }
+                        return;
                     }
+                    
+                    // Create new opponent token
+                    const playerArea = document.getElementById(`player${playerNum}Area`);
+                    if (!playerArea) return;
+                    
+                    const tokenIndex = counterTokens[playerNum]?.length || 0;
+                    const tokenColor = TOKEN_COLORS[playerNum][tokenIndex % 4] || '#444';
+                    
+                    const token = document.createElement("div");
+                    token.className = `counter-token token-p${playerNum}-${(tokenIndex % 4) + 1}`;
+                    token.id = tokenId;
+                    token.style.left = `${tokenData.x || 0}px`;
+                    token.style.top = `${tokenData.y || 0}px`;
+                    token.style.cursor = 'default';
+                    token.title = "Opponent's token";
+                    
+                    token.innerHTML = `
+                        <div class="counter-value">${tokenData.value || 0}</div>
+                        <div class="counter-label">${tokenData.label || 'Token'}</div>
+                    `;
+                    
+                    playerArea.appendChild(token);
+                    
+                    if (!counterTokens[playerNum]) {
+                        counterTokens[playerNum] = [];
+                    }
+                    
+                    counterTokens[playerNum].push({
+                        id: tokenId,
+                        player: playerNum,
+                        value: tokenData.value || 0,
+                        label: tokenData.label || 'Token',
+                        color: tokenColor,
+                        element: token,
+                        position: { x: tokenData.x || 0, y: tokenData.y || 0 },
+                        isOpponent: true
+                    });
                 });
             });
         }
@@ -2149,7 +1838,8 @@ function syncGameStateFromFirebase(firebaseState) {
             lifeZones = JSON.parse(JSON.stringify(firebaseState.lifeZones));
             for (let player of [1, 2]) {
                 for (let i = 0; i < 5; i++) {
-                    updateLifeZoneDisplay(player, i, lifeZones[player][i], player !== ourPlayer);
+                    const cardData = lifeZones[player][i];
+                    updateLifeZoneDisplay(player, i, cardData, player !== ourPlayer);
                 }
             }
         }
@@ -2164,95 +1854,8 @@ function syncGameStateFromFirebase(firebaseState) {
 }
 
 // ============================================================================
-// AUTO-SYNC WRAPPER
+// FIXED CARD CREATION FUNCTION - Allow both players to play cards
 // ============================================================================
-function autoSync(originalFunction) {
-    return function(...args) {
-        const result = originalFunction.apply(this, args);
-        
-        if (multiplayer.gameId) {
-            setTimeout(() => {
-                syncGameStateToFirebase();
-            }, 100);
-        }
-        
-        return result;
-    };
-}
-
-// ============================================================================
-// CORE GAME FUNCTIONS
-// ============================================================================
-function updateDeckVisual(player) {
-    const deckZone = document.getElementById(`deck${player}`);
-    const deckCount = decks[player].length;
-    const deckStack = deckZone.querySelector('.deck-card-stack');
-    
-    document.getElementById(`deckCount${player}`).textContent = deckCount;
-    
-    if (deckCount === 0) {
-        deckZone.classList.add('empty');
-        document.getElementById(`shuffleBtn${player}`).disabled = true;
-        document.getElementById(`openBtn${player}`).disabled = true;
-    } else {
-        deckZone.classList.remove('empty');
-        document.getElementById(`shuffleBtn${player}`).disabled = false;
-        document.getElementById(`openBtn${player}`).disabled = false;
-        
-        deckStack.innerHTML = '';
-        const layers = Math.min(5, deckCount);
-        for (let i = 0; i < layers; i++) {
-            const layer = document.createElement('div');
-            layer.className = 'deck-card-layer';
-            deckStack.appendChild(layer);
-        }
-    }
-}
-updateDeckVisual = autoSync(updateDeckVisual);
-
-function drawCardWithAnimation(player) {
-    if (decks[player].length === 0) {
-        showNotification("Deck Empty", "Open Shop to add cards to your deck!", 'warning');
-        return;
-    }
-    
-    const cardData = decks[player].shift();
-    hands[player].push(cardData);
-    updateCounters();
-    updateDeckVisual(player);
-    
-    showNotification("Card Drawn", `Player ${player} drew 1 card`, 'success');
-}
-drawCardWithAnimation = autoSync(drawCardWithAnimation);
-
-function shuffleDeckWithAnimation(player) {
-    if (decks[player].length === 0) {
-        showNotification("Deck Empty", "No cards to shuffle!", 'warning');
-        return;
-    }
-    
-    decks[player].sort(() => Math.random() - 0.5);
-    updateDeckVisual(player);
-    
-    showNotification("Deck Shuffled", `Player ${player}'s deck shuffled`, 'success');
-}
-shuffleDeckWithAnimation = autoSync(shuffleDeckWithAnimation);
-
-function openFromDeck(player) {
-    if (decks[player].length === 0) {
-        showNotification("Deck Empty", "No cards in deck!", 'warning');
-        return;
-    }
-    
-    const cardData = decks[player].shift();
-    createBoardCard(cardData, player);
-    updateCounters();
-    updateDeckVisual(player);
-    
-    showNotification("Card Opened", `Player ${player} opened a card`, 'success');
-}
-openFromDeck = autoSync(openFromDeck);
-
 function createBoardCard(cardData, player) {
     const cardId = cardData.id || `board_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
@@ -2275,7 +1878,8 @@ function createBoardCard(cardData, player) {
     boardCard.style.left = `${x}px`;
     boardCard.style.top = `${y}px`;
     
-    if (player === multiplayer.playerNumber) {
+    // Allow both players to interact with their own cards
+    if (multiplayer.gameId && player === multiplayer.playerNumber) {
         boardCard.addEventListener('mousedown', startDrag);
         boardCard.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -2285,7 +1889,17 @@ function createBoardCard(cardData, player) {
                 cardId: cardId 
             });
         });
-    } else {
+        
+        // Add card controls for our own cards
+        const controls = document.createElement('div');
+        controls.className = 'card-controls';
+        controls.innerHTML = `
+            <button class="card-control-btn rotate-btn" onclick="rotateCardDirect(this.parentElement.parentElement)">↻</button>
+            <button class="card-control-btn delete-btn" onclick="showDeleteConfirmationForCard('${cardId}')">🗑</button>
+        `;
+        boardCard.appendChild(controls);
+    } else if (multiplayer.gameId) {
+        // Opponent's card - view only
         boardCard.style.cursor = 'default';
         boardCard.title = "Opponent's card";
         boardCard.addEventListener('click', (e) => {
@@ -2297,6 +1911,25 @@ function createBoardCard(cardData, player) {
                 isOpponent: true 
             });
         });
+    } else {
+        // Local play
+        boardCard.addEventListener('mousedown', startDrag);
+        boardCard.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showCardZoom(cardData.image, { 
+                type: 'board', 
+                player: player, 
+                cardId: cardId 
+            });
+        });
+        
+        const controls = document.createElement('div');
+        controls.className = 'card-controls';
+        controls.innerHTML = `
+            <button class="card-control-btn rotate-btn" onclick="rotateCardDirect(this.parentElement.parentElement)">↻</button>
+            <button class="card-control-btn delete-btn" onclick="showDeleteConfirmationForCard('${cardId}')">🗑</button>
+        `;
+        boardCard.appendChild(controls);
     }
     
     playerArea.appendChild(boardCard);
@@ -2307,416 +1940,18 @@ function createBoardCard(cardData, player) {
         player: player,
         element: boardCard,
         color: cardData.color,
-        rotated: false
+        rotated: false,
+        isOpponent: multiplayer.gameId ? (player !== multiplayer.playerNumber) : false
     });
 }
 createBoardCard = autoSync(createBoardCard);
 
-function showCardZoom(image, source) {
-    currentZoomImage = image;
-    currentZoomSource = source;
-
-    document.getElementById("zoomCard").style.backgroundImage = `url('${image}')`;
-    
-    const isShop = (source.type === 'shop');
-    const isHand = (source.type === 'hand');
-    const isBoard = (source.type === 'board');
-    const isGraveyard = (source.type === 'graveyard');
-    const isDeck = (source.type === 'deck');
-    const isLifeZone = (source.type === 'lifezone');
-    const isOpponent = source.isOpponent;
-    
-    document.getElementById("addToDeckP1").style.display = isShop ? "inline-block" : "none";
-    document.getElementById("addToDeckP2").style.display = isShop ? "inline-block" : "none";
-    document.getElementById("playToBoard").style.display = (isHand && !isOpponent) ? "inline-block" : "none";
-    document.getElementById("moveToHand").style.display = (isBoard && !isOpponent) ? "inline-block" : "none";
-    document.getElementById("moveToDeck").style.display = (isBoard && !isOpponent) ? "inline-block" : "none";
-    document.getElementById("moveToGY").style.display = ((isHand || isBoard) && !isOpponent) ? "inline-block" : "none";
-    document.getElementById("putToBoardFromGY").style.display = isGraveyard ? "inline-block" : "none";
-    document.getElementById("putToBoardFromDeck").style.display = isDeck ? "inline-block" : "none";
-    
-    document.getElementById("rotateCardBtn").style.display = (isBoard && !isOpponent) ? "inline-block" : "none";
-    document.getElementById("removeFromLifeZone").style.display = (isLifeZone && !isOpponent) ? "inline-block" : "none";
-    document.getElementById("flipLifeZoneCard").style.display = (isLifeZone && !isOpponent) ? "inline-block" : "none";
-    document.getElementById("deleteCardBtn").style.display = (isBoard && !isOpponent) ? "inline-block" : "none";
-    
-    document.getElementById("zoomOverlay").style.display = "flex";
-}
-
-function closeZoomOnly() { 
-    document.getElementById("zoomOverlay").style.display = "none"; 
-    currentZoomSource = null;
-    cardToDelete = null;
-}
-
-function playToBoard() {
-    if (!currentZoomSource || currentZoomSource.type !== 'hand') return;
-    
-    const player = currentZoomSource.player;
-    const cardId = currentZoomSource.cardId;
-    
-    const cardIndex = hands[player].findIndex(card => card.id === cardId);
-    if (cardIndex > -1) {
-        const cardData = hands[player][cardIndex];
-        hands[player].splice(cardIndex, 1);
-        createBoardCard(cardData, player);
-        updateCounters();
-        closeZoomOnly();
-        showNotification("Card Played", `Card played to board`, 'success');
-    }
-}
-playToBoard = autoSync(playToBoard);
-
-function moveToHand() {
-    if (!currentZoomSource || currentZoomSource.type !== 'board') return;
-    
-    const player = currentZoomSource.player;
-    const cardId = currentZoomSource.cardId;
-    
-    const cardIndex = boardCards.findIndex(card => card.id === cardId);
-    if (cardIndex > -1) {
-        const cardData = boardCards[cardIndex];
-        boardCards.splice(cardIndex, 1);
-        document.getElementById(cardId)?.remove();
-        hands[player].push(cardData);
-        updateCounters();
-        closeZoomOnly();
-        showNotification("Card Returned", `Card returned to hand`, 'info');
-    }
-}
-moveToHand = autoSync(moveToHand);
-
-function moveToGY() {
-    if (!currentZoomSource) return;
-    
-    const player = currentZoomSource.player;
-    const cardId = currentZoomSource.cardId;
-    const sourceType = currentZoomSource.type;
-    
-    let cardData = null;
-    
-    if (sourceType === 'hand') {
-        const cardIndex = hands[player].findIndex(card => card.id === cardId);
-        if (cardIndex > -1) {
-            cardData = hands[player][cardIndex];
-            hands[player].splice(cardIndex, 1);
-        }
-    } else if (sourceType === 'board') {
-        const cardIndex = boardCards.findIndex(card => card.id === cardId);
-        if (cardIndex > -1) {
-            cardData = boardCards[cardIndex];
-            boardCards.splice(cardIndex, 1);
-            document.getElementById(cardId)?.remove();
-        }
-    }
-    
-    if (cardData) {
-        graveyards[player].push(cardData);
-        updateCounters();
-        closeZoomOnly();
-        showNotification("Card Sent", `Card sent to graveyard`, 'info');
-    }
-}
-moveToGY = autoSync(moveToGY);
-
-function addToDeck(player) {
-    if (currentZoomImage) {
-        const cardId = `card_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        
-        let categoryColor = "#555";
-        for (const [categoryId, category] of Object.entries(CARD_CATEGORIES)) {
-            if (currentZoomImage.includes(category.prefix)) {
-                categoryColor = category.color;
-                break;
-            }
-        }
-        
-        decks[player].push({ 
-            image: currentZoomImage, 
-            id: cardId,
-            color: categoryColor
-        });
-        updateCounters();
-        updateDeckVisual(player);
-        closeZoomOnly();
-        showNotification("Card Added", `Card added to deck`, 'success');
-    }
-}
-addToDeck = autoSync(addToDeck);
-
-function updateCounters() {
-    document.getElementById("handCount1").textContent = hands[1].length;
-    document.getElementById("handCount2").textContent = hands[2].length;
-    document.getElementById("gyCount1").textContent = graveyards[1].length;
-    document.getElementById("gyCount2").textContent = graveyards[2].length;
-    updateDeckVisual(1);
-    updateDeckVisual(2);
-}
-updateCounters = autoSync(updateCounters);
-
 // ============================================================================
-// SHOP FUNCTIONS
-// ============================================================================
-function setupShop() {
-    const container = document.getElementById("shopCards");
-    allShopCards = [];
-    
-    for (const [categoryId, category] of Object.entries(CARD_CATEGORIES)) {
-        for (let i = 1; i <= category.count; i++) {
-            const imgUrl = `${category.folder}${i}${category.prefix}${IMAGE_EXT}`;
-            
-            allShopCards.push({
-                image: imgUrl,
-                category: categoryId,
-                categoryName: category.name,
-                color: category.color
-            });
-        }
-    }
-    
-    filterShopCards('all');
-}
-
-function filterShopCards(category, event) {
-    currentShopCategory = category;
-    
-    document.querySelectorAll('.category-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    
-    if (event && event.target) {
-        event.target.classList.add('active');
-    } else {
-        document.querySelector('.category-btn').classList.add('active');
-    }
-    
-    const lifeButtons = document.getElementById('lifeCategoryButtons');
-    if (category === 'life') {
-        lifeButtons.style.display = 'flex';
-    } else {
-        lifeButtons.style.display = 'none';
-    }
-    
-    const container = document.getElementById("shopCards");
-    container.innerHTML = "";
-    
-    const filteredCards = category === 'all' 
-        ? allShopCards 
-        : allShopCards.filter(card => card.category === category);
-    
-    filteredCards.forEach(cardData => {
-        const card = document.createElement("div");
-        card.className = "hand-display-card shop-card";
-        
-        const img = new Image();
-        img.onload = function() {
-            card.style.backgroundImage = `url('${cardData.image}')`;
-        };
-        img.onerror = function() {
-            card.style.backgroundColor = cardData.color;
-        };
-        img.src = cardData.image;
-        
-        card.style.borderColor = cardData.color;
-        card.style.borderWidth = "3px";
-        
-        const badge = document.createElement("div");
-        badge.style.position = "absolute";
-        badge.style.top = "5px";
-        badge.style.right = "5px";
-        badge.style.background = cardData.color;
-        badge.style.color = "white";
-        badge.style.padding = "2px 6px";
-        badge.style.borderRadius = "10px";
-        badge.style.fontSize = "10px";
-        badge.style.fontWeight = "bold";
-        badge.textContent = cardData.categoryName.charAt(0);
-        card.appendChild(badge);
-        
-        card.title = `${cardData.categoryName}\nClick to add to deck`;
-        
-        if (category === 'life') {
-            card.onclick = () => {
-                currentShopImage = cardData.image;
-                document.querySelectorAll('.shop-card').forEach(c => {
-                    c.style.boxShadow = 'none';
-                });
-                card.style.boxShadow = '0 0 10px #7ED321';
-                showNotification("Card Selected", `Selected ${cardData.categoryName} card. Now click "Add to P1 Life Zone" or "Add to P2 Life Zone"`, 'info', 3000);
-            };
-        } else {
-            card.onclick = () => openQuantitySelector(cardData.image, cardData.category);
-        }
-        
-        container.appendChild(card);
-    });
-}
-
-function openShop() {
-    document.getElementById("shopOverlay").style.display = "flex";
-    currentShopImage = null;
-    document.querySelectorAll('.shop-card').forEach(c => {
-        c.style.boxShadow = 'none';
-    });
-}
-
-function closeShop() {
-    document.getElementById("shopOverlay").style.display = "none";
-}
-
-function openQuantitySelector(image, category) {
-    quantitySelectorState = {
-        image: image,
-        category: category,
-        quantity: 1
-    };
-    
-    document.getElementById('quantityCardPreview').style.backgroundImage = `url('${image}')`;
-    document.getElementById('quantityDisplay').textContent = '1';
-    document.getElementById('quantityOverlay').style.display = 'flex';
-}
-
-function changeQuantity(amount) {
-    const newQty = quantitySelectorState.quantity + amount;
-    if (newQty >= 1 && newQty <= 99) {
-        quantitySelectorState.quantity = newQty;
-        document.getElementById('quantityDisplay').textContent = newQty;
-    }
-}
-
-function closeQuantitySelector() {
-    document.getElementById('quantityOverlay').style.display = 'none';
-}
-
-function addMultipleToDeck(player) {
-    const { image, quantity } = quantitySelectorState;
-    
-    if (image && quantity > 0) {
-        let categoryColor = "#555";
-        for (const [categoryId, category] of Object.entries(CARD_CATEGORIES)) {
-            if (image.includes(category.prefix)) {
-                categoryColor = category.color;
-                break;
-            }
-        }
-        
-        for (let i = 0; i < quantity; i++) {
-            const cardId = `card_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${i}`;
-            decks[player].push({ 
-                image: image, 
-                id: cardId,
-                color: categoryColor
-            });
-        }
-        
-        updateCounters();
-        updateDeckVisual(player);
-        closeQuantitySelector();
-        
-        showNotification("Cards Added to Deck", `${quantity} card(s) added to Player ${player}'s deck!`, 'success', 3000);
-    }
-}
-
-// ============================================================================
-// DRAG AND DROP
-// ============================================================================
-function startDrag(e) {
-    const card = e.target;
-    if (!card.classList.contains('board-card')) return;
-    
-    const cardId = card.id;
-    const cardData = boardCards.find(c => c.id === cardId);
-    if (!cardData || cardData.player !== multiplayer.playerNumber) return;
-    
-    e.preventDefault();
-    e.stopPropagation();
-    
-    dragState.mouseDownTime = Date.now();
-    dragState.startX = e.clientX;
-    dragState.startY = e.clientY;
-    
-    dragState.originalCard = card;
-    dragState.originalParent = card.parentElement;
-    dragState.originalLeft = parseFloat(card.style.left) || 0;
-    dragState.originalTop = parseFloat(card.style.top) || 0;
-    dragState.draggingToken = false;
-    
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-}
-
-function handleMouseMove(e) {
-    if (!dragState.originalCard) return;
-    
-    const currentTime = Date.now();
-    const timeDiff = currentTime - dragState.mouseDownTime;
-    const distanceX = Math.abs(e.clientX - dragState.startX);
-    const distanceY = Math.abs(e.clientY - dragState.startY);
-    
-    if (!dragState.isDragging && (timeDiff > 50 || distanceX > 5 || distanceY > 5)) {
-        dragState.isDragging = true;
-        
-        dragState.card = dragState.originalCard.cloneNode(true);
-        dragState.card.classList.add('dragging');
-        dragState.card.style.left = `${e.clientX - 60}px`;
-        dragState.card.style.top = `${e.clientY - 90}px`;
-        document.body.appendChild(dragState.card);
-        
-        dragState.originalCard.style.visibility = "hidden";
-    }
-    
-    if (dragState.isDragging && dragState.card) {
-        dragState.card.style.left = `${e.clientX - 60}px`;
-        dragState.card.style.top = `${e.clientY - 90}px`;
-    }
-}
-
-function handleMouseUp(e) {
-    if (dragState.isDragging && !dragState.draggingToken) {
-        const playerArea = dragState.originalParent;
-        const rect = playerArea.getBoundingClientRect();
-        
-        const relativeX = e.clientX - rect.left - 60;
-        const relativeY = e.clientY - rect.top - 90;
-        
-        const boundedX = Math.max(0, Math.min(relativeX, rect.width - 120));
-        const boundedY = Math.max(0, Math.min(relativeY, rect.height - 180));
-        
-        dragState.originalCard.style.left = `${boundedX}px`;
-        dragState.originalCard.style.top = `${boundedY}px`;
-        dragState.originalCard.style.visibility = "visible";
-        
-        if (dragState.card) {
-            dragState.card.remove();
-        }
-        
-        const cardId = dragState.originalCard.id;
-        const cardIndex = boardCards.findIndex(c => c.id === cardId);
-        if (cardIndex > -1) {
-            boardCards[cardIndex].element = dragState.originalCard;
-        }
-        
-        if (multiplayer.gameId) {
-            setTimeout(() => {
-                syncGameStateToFirebase();
-            }, 100);
-        }
-    }
-    
-    dragState.isDragging = false;
-    dragState.card = null;
-    dragState.originalCard = null;
-    dragState.draggingToken = false;
-    
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', handleMouseUp);
-}
-
-// ============================================================================
-// TOKEN FUNCTIONS
+// FIXED TOKEN FUNCTIONS - Allow both players to use tokens
 // ============================================================================
 function addTokenToPlayer(player) {
-    if (player !== multiplayer.playerNumber) return;
+    // In multiplayer, only allow adding tokens for your own player
+    if (multiplayer.gameId && player !== multiplayer.playerNumber) return;
     
     const playerArea = document.getElementById(`player${player}Area`);
     const tokenCount = counterTokens[player].length;
@@ -2743,16 +1978,28 @@ function addTokenToPlayer(player) {
     token.style.left = `${x}px`;
     token.style.top = `${y}px`;
     
+    // Only add controls for our own tokens in multiplayer
+    const showControls = !multiplayer.gameId || player === multiplayer.playerNumber;
+    
     token.innerHTML = `
         <div class="counter-value">0</div>
         <div class="counter-label">${tokenLabel}</div>
+        ${showControls ? `
         <div class="counter-controls">
             <button class="counter-btn minus" onclick="changeTokenValue('${tokenId}', -1)">-</button>
             <button class="counter-btn plus" onclick="changeTokenValue('${tokenId}', 1)">+</button>
         </div>
+        ` : ''}
     `;
     
-    token.addEventListener('mousedown', startTokenDrag);
+    if (showControls) {
+        token.addEventListener('mousedown', startTokenDrag);
+        token.style.cursor = 'move';
+    } else {
+        token.style.cursor = 'default';
+        token.title = "Opponent's token";
+    }
+    
     playerArea.appendChild(token);
     
     counterTokens[player].push({
@@ -2762,70 +2009,159 @@ function addTokenToPlayer(player) {
         label: tokenLabel,
         color: tokenColor,
         element: token,
-        position: { x, y }
+        position: { x, y },
+        isOpponent: multiplayer.gameId ? (player !== multiplayer.playerNumber) : false
     });
     
     showNotification("Token Added", `${tokenLabel} token added`, 'success');
 }
 addTokenToPlayer = autoSync(addTokenToPlayer);
 
-function changeTokenValue(tokenId, amount) {
-    event.stopPropagation();
+// ============================================================================
+// FIXED PLAY TO BOARD - Allow Player 2 to play cards
+// ============================================================================
+function playToBoard() {
+    if (!currentZoomSource || currentZoomSource.type !== 'hand') return;
     
-    for (const player of [1, 2]) {
-        const tokenIndex = counterTokens[player].findIndex(token => token.id === tokenId);
-        if (tokenIndex > -1) {
-            if (player !== multiplayer.playerNumber) return;
-            
-            const token = counterTokens[player][tokenIndex];
-            const newValue = token.value + amount;
-            token.value = newValue;
-            
-            const valueElement = token.element.querySelector('.counter-value');
-            if (valueElement) {
-                valueElement.textContent = newValue;
-            }
-            
-            if (multiplayer.gameId) {
-                setTimeout(() => {
-                    syncGameStateToFirebase();
-                }, 100);
-            }
-            break;
-        }
+    const player = currentZoomSource.player;
+    const cardId = currentZoomSource.cardId;
+    
+    // In multiplayer, check if player is allowed to play
+    if (multiplayer.gameId && player !== multiplayer.playerNumber) {
+        showNotification("Not Allowed", "You can only play cards from your own hand", 'error');
+        return;
+    }
+    
+    const cardIndex = hands[player].findIndex(card => card.id === cardId);
+    if (cardIndex > -1) {
+        const cardData = hands[player][cardIndex];
+        hands[player].splice(cardIndex, 1);
+        createBoardCard(cardData, player);
+        updateCounters();
+        closeZoomOnly();
+        showNotification("Card Played", `Card played to board`, 'success');
     }
 }
-changeTokenValue = autoSync(changeTokenValue);
+playToBoard = autoSync(playToBoard);
 
-function resetPlayerTokens(player) {
-    if (player !== multiplayer.playerNumber) return;
+// ============================================================================
+// FIXED ZOOM FUNCTION - Show proper controls for both players
+// ============================================================================
+function showCardZoom(image, source) {
+    currentZoomImage = image;
+    currentZoomSource = source;
+
+    document.getElementById("zoomCard").style.backgroundImage = `url('${image}')`;
     
-    counterTokens[player].forEach(token => {
-        if (token.element && token.element.parentElement) {
-            token.element.remove();
+    const isShop = (source.type === 'shop');
+    const isHand = (source.type === 'hand');
+    const isBoard = (source.type === 'board');
+    const isGraveyard = (source.type === 'graveyard');
+    const isDeck = (source.type === 'deck');
+    const isLifeZone = (source.type === 'lifezone');
+    const isOpponent = source.isOpponent;
+    const isOurCard = multiplayer.gameId ? (source.player === multiplayer.playerNumber) : true;
+    
+    document.getElementById("addToDeckP1").style.display = isShop ? "inline-block" : "none";
+    document.getElementById("addToDeckP2").style.display = isShop ? "inline-block" : "none";
+    document.getElementById("playToBoard").style.display = (isHand && !isOpponent && isOurCard) ? "inline-block" : "none";
+    document.getElementById("moveToHand").style.display = (isBoard && !isOpponent && isOurCard) ? "inline-block" : "none";
+    document.getElementById("moveToDeck").style.display = (isBoard && !isOpponent && isOurCard) ? "inline-block" : "none";
+    document.getElementById("moveToGY").style.display = ((isHand || isBoard) && !isOpponent && isOurCard) ? "inline-block" : "none";
+    document.getElementById("putToBoardFromGY").style.display = (isGraveyard && !isOpponent && isOurCard) ? "inline-block" : "none";
+    document.getElementById("putToBoardFromDeck").style.display = (isDeck && !isOpponent && isOurCard) ? "inline-block" : "none";
+    
+    document.getElementById("rotateCardBtn").style.display = (isBoard && !isOpponent && isOurCard) ? "inline-block" : "none";
+    document.getElementById("removeFromLifeZone").style.display = (isLifeZone && !isOpponent && isOurCard) ? "inline-block" : "none";
+    document.getElementById("flipLifeZoneCard").style.display = (isLifeZone && !isOpponent && isOurCard) ? "inline-block" : "none";
+    document.getElementById("deleteCardBtn").style.display = (isBoard && !isOpponent && isOurCard) ? "inline-block" : "none";
+    
+    document.getElementById("zoomOverlay").style.display = "flex";
+}
+
+// ============================================================================
+// REMOVE THE ANNOYING "UPDATED THE BOARD" NOTIFICATION
+// ============================================================================
+function handleBoardStateUpdate(snapshot) {
+    if (!snapshot.exists() || !multiplayer.gameId || multiplayer.isSyncing) return;
+    
+    const boardState = snapshot.val();
+    
+    // Skip our own updates
+    if (boardState.lastUpdatePlayer === multiplayer.playerNumber) {
+        return;
+    }
+    
+    if (boardState.timestamp > multiplayer.lastSyncTime) {
+        multiplayer.lastSyncTime = boardState.timestamp;
+        syncGameStateFromFirebase(boardState);
+        
+        // REMOVED: Don't show notification for every update
+        // if (boardState.lastUpdatePlayer && boardState.lastUpdatePlayer !== multiplayer.playerNumber) {
+        //     showNotification(`Player ${boardState.lastUpdatePlayer}`, 'Updated the board', 'info', 2000);
+        // }
+    }
+}
+
+// ============================================================================
+// FIXED HAND VIEW - Show proper controls for both players
+// ============================================================================
+function viewHand(player) {
+    // In multiplayer, only allow viewing your own hand
+    if (multiplayer.gameId && player !== multiplayer.playerNumber) {
+        showNotification("Not Allowed", "You can only view your own hand", 'warning');
+        return;
+    }
+    
+    const overlay = document.getElementById("handOverlay");
+    const container = document.getElementById("handCardsContainer");
+    document.getElementById("handTitle").textContent = `Player ${player}'s Hand (${hands[player].length} Cards)`;
+    container.innerHTML = "";
+
+    hands[player].forEach(cardData => {
+        const card = document.createElement("div");
+        card.className = "hand-display-card";
+        
+        const img = new Image();
+        img.onload = function() {
+            card.style.backgroundImage = `url('${cardData.image}')`;
+        };
+        img.onerror = function() {
+            card.style.backgroundColor = cardData.color || "#555";
+        };
+        img.src = cardData.image;
+        
+        if (cardData.color) {
+            card.style.borderColor = cardData.color;
+            card.style.borderWidth = "3px";
         }
+        
+        card.onclick = () => showCardZoom(cardData.image, { 
+            type: 'hand', 
+            player: player, 
+            cardId: cardData.id 
+        });
+        container.appendChild(card);
     });
-    
-    counterTokens[player] = [];
-    showNotification("Tokens Reset", `Player ${player}'s tokens have been reset!`, 'info', 3000);
-}
-resetPlayerTokens = autoSync(resetPlayerTokens);
 
-function startTokenDrag(e) {
-    const token = e.target.closest('.counter-token');
-    if (!token) return;
+    overlay.style.display = "flex";
+}
+
+// ============================================================================
+// FIXED START DRAG - Allow both players to drag their own cards
+// ============================================================================
+function startDrag(e) {
+    const card = e.target.closest('.board-card');
+    if (!card) return;
     
-    const tokenId = token.id;
-    let ourToken = false;
-    for (const player of [1, 2]) {
-        const tokenIndex = counterTokens[player].findIndex(t => t.id === tokenId);
-        if (tokenIndex > -1 && player === multiplayer.playerNumber) {
-            ourToken = true;
-            break;
-        }
+    const cardId = card.id;
+    const cardData = boardCards.find(c => c.id === cardId);
+    if (!cardData) return;
+    
+    // In multiplayer, only allow dragging our own cards
+    if (multiplayer.gameId && cardData.player !== multiplayer.playerNumber) {
+        return;
     }
-    
-    if (!ourToken) return;
     
     e.preventDefault();
     e.stopPropagation();
@@ -2834,54 +2170,29 @@ function startTokenDrag(e) {
     dragState.startX = e.clientX;
     dragState.startY = e.clientY;
     
-    dragState.originalCard = token;
-    dragState.originalParent = token.parentElement;
-    dragState.originalLeft = parseFloat(token.style.left) || 0;
-    dragState.originalTop = parseFloat(token.style.top) || 0;
-    dragState.draggingToken = true;
+    dragState.originalCard = card;
+    dragState.originalParent = card.parentElement;
+    dragState.originalLeft = parseFloat(card.style.left) || 0;
+    dragState.originalTop = parseFloat(card.style.top) || 0;
+    dragState.draggingToken = false;
     
-    document.addEventListener('mousemove', handleTokenMouseMove);
-    document.addEventListener('mouseup', handleTokenMouseUp);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
 }
 
-function handleTokenMouseMove(e) {
-    if (!dragState.originalCard || !dragState.draggingToken) return;
-    
-    const currentTime = Date.now();
-    const timeDiff = currentTime - dragState.mouseDownTime;
-    const distanceX = Math.abs(e.clientX - dragState.startX);
-    const distanceY = Math.abs(e.clientY - dragState.startY);
-    
-    if (!dragState.isDragging && (timeDiff > 50 || distanceX > 5 || distanceY > 5)) {
-        dragState.isDragging = true;
-        
-        dragState.card = dragState.originalCard.cloneNode(true);
-        dragState.card.classList.add('dragging');
-        dragState.card.style.width = "50px";
-        dragState.card.style.height = "50px";
-        dragState.card.style.left = `${e.clientX - 25}px`;
-        dragState.card.style.top = `${e.clientY - 25}px`;
-        document.body.appendChild(dragState.card);
-        
-        dragState.originalCard.style.visibility = "hidden";
-    }
-    
-    if (dragState.isDragging && dragState.card) {
-        dragState.card.style.left = `${e.clientX - 25}px`;
-        dragState.card.style.top = `${e.clientY - 25}px`;
-    }
-}
-
-function handleTokenMouseUp(e) {
-    if (dragState.isDragging && dragState.draggingToken) {
+// ============================================================================
+// FIXED DRAG HANDLING - Sync after drag
+// ============================================================================
+function handleMouseUp(e) {
+    if (dragState.isDragging && !dragState.draggingToken) {
         const playerArea = dragState.originalParent;
         const rect = playerArea.getBoundingClientRect();
         
-        const relativeX = e.clientX - rect.left - 25;
-        const relativeY = e.clientY - rect.top - 25;
+        const relativeX = e.clientX - rect.left - 60;
+        const relativeY = e.clientY - rect.top - 90;
         
-        const boundedX = Math.max(0, Math.min(relativeX, rect.width - 50));
-        const boundedY = Math.max(0, Math.min(relativeY, rect.height - 50));
+        const boundedX = Math.max(0, Math.min(relativeX, rect.width - 120));
+        const boundedY = Math.max(0, Math.min(relativeY, rect.height - 180));
         
         dragState.originalCard.style.left = `${boundedX}px`;
         dragState.originalCard.style.top = `${boundedY}px`;
@@ -2891,15 +2202,13 @@ function handleTokenMouseUp(e) {
             dragState.card.remove();
         }
         
-        const tokenId = dragState.originalCard.id;
-        for (const player of [1, 2]) {
-            const tokenIndex = counterTokens[player].findIndex(token => token.id === tokenId);
-            if (tokenIndex > -1) {
-                counterTokens[player][tokenIndex].position = { x: boundedX, y: boundedY };
-                break;
-            }
+        const cardId = dragState.originalCard.id;
+        const cardIndex = boardCards.findIndex(c => c.id === cardId);
+        if (cardIndex > -1) {
+            boardCards[cardIndex].element = dragState.originalCard;
         }
         
+        // Auto-sync after drag
         if (multiplayer.gameId) {
             setTimeout(() => {
                 syncGameStateToFirebase();
@@ -2912,8 +2221,8 @@ function handleTokenMouseUp(e) {
     dragState.originalCard = null;
     dragState.draggingToken = false;
     
-    document.removeEventListener('mousemove', handleTokenMouseMove);
-    document.removeEventListener('mouseup', handleTokenMouseUp);
+    document.removeEventListener('mousemove', handleMouseMove);
+    document.removeEventListener('mouseup', handleMouseUp);
 }
 
 // ============================================================================
