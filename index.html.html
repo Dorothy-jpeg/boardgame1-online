@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Board Game with Card Zoom and Action Buttons</title>
+    <title>Board Game with Card Zoom and Action Buttons - Online Multiplayer</title>
+    <!-- Add Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <style>
         /* Styling remains the same as before */
         body {
@@ -1174,6 +1177,134 @@
                 opacity: 0;
             }
         }
+
+        /* ========== MULTIPLAYER STYLES ========== */
+        .multiplayer-btn {
+            position: absolute;
+            top: 50%;
+            left: 10px;
+            transform: translateY(-50%);
+            z-index: 200;
+            background: linear-gradient(145deg, #2196F3, #1976D2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+            transition: all 0.3s;
+        }
+        
+        .multiplayer-btn:hover {
+            background: linear-gradient(145deg, #1976D2, #1565C0);
+            transform: translateY(-50%) scale(1.05);
+        }
+        
+        .multiplayer-overlay {
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(10px);
+        }
+        
+        .multiplayer-panel {
+            background: #1a1a1a;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+            border: 2px solid #2196F3;
+            box-shadow: 0 0 30px rgba(33, 150, 243, 0.2);
+        }
+        
+        .game-code {
+            font-family: monospace;
+            font-size: 32px;
+            letter-spacing: 3px;
+            background: #333;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            color: #4CAF50;
+            text-align: center;
+            border: 2px solid #4CAF50;
+        }
+        
+        .copy-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        
+        .player-status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .player-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            margin: 5px;
+            font-weight: bold;
+        }
+        
+        .player1-badge {
+            background: rgba(68, 136, 255, 0.2);
+            border: 2px solid #4488ff;
+            color: #4488ff;
+        }
+        
+        .player2-badge {
+            background: rgba(136, 68, 255, 0.2);
+            border: 2px solid #8844ff;
+            color: #8844ff;
+        }
+        
+        .chat-box {
+            margin-top: 20px;
+            border-top: 1px solid #444;
+            padding-top: 20px;
+        }
+        
+        .chat-messages {
+            height: 150px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .chat-input {
+            width: 100%;
+            padding: 10px;
+            background: #333;
+            border: 1px solid #555;
+            color: white;
+            border-radius: 5px;
+        }
+        
+        .turn-indicator {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(145deg, #FF9800, #F57C00);
+            color: white;
+            padding: 12px 30px;
+            border-radius: 25px;
+            z-index: 100000;
+            font-weight: bold;
+            box-shadow: 0 4px 20px rgba(255, 152, 0, 0.4);
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -1181,7 +1312,83 @@
 <!-- NOTIFICATION CONTAINER -->
 <div class="notification-container" id="notificationContainer"></div>
 
+<!-- TURN INDICATOR -->
+<div class="turn-indicator" id="turnIndicator">Your Turn!</div>
+
+<!-- MULTIPLAYER OVERLAY -->
+<div id="multiplayerOverlay" class="overlay multiplayer-overlay" style="display: none;">
+    <div class="multiplayer-panel">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h2 style="color: #2196F3; margin: 0;">🌐 Online Multiplayer</h2>
+            <button onclick="closeMultiplayerMenu()" style="background:#c00; padding: 8px 16px;">Close</button>
+        </div>
+        
+        <div id="createGameSection">
+            <h3>🎮 Host New Game</h3>
+            <p>Create a game room and invite your friend</p>
+            <button onclick="createGame()" style="background: #4CAF50; padding: 15px 30px; font-size: 18px; margin: 15px 0; width: 100%;">
+                🚀 Create Game Room
+            </button>
+        </div>
+        
+        <div id="joinGameSection" style="margin-top: 30px;">
+            <h3>🔗 Join Game</h3>
+            <p>Enter the game code from your friend:</p>
+            <input type="text" id="gameCodeInput" placeholder="Enter 6-digit code" 
+                   style="padding: 15px; width: 100%; font-size: 18px; margin: 10px 0; text-align: center; letter-spacing: 3px;"
+                   maxlength="6" oninput="this.value = this.value.toUpperCase()">
+            <button onclick="joinGame()" style="background: #2196F3; padding: 15px 30px; width: 100%; font-size: 16px;">
+                ✅ Join Game
+            </button>
+        </div>
+        
+        <div id="gameInfoSection" style="display: none;">
+            <h3>🎮 Game Room</h3>
+            <p>Share this code with your friend:</p>
+            <div class="game-code" id="displayGameCode">XXXXXX</div>
+            
+            <div style="display: flex; gap: 10px; justify-content: center; margin: 15px 0;">
+                <button class="copy-btn" onclick="copyGameCode()">
+                    📋 Copy Code
+                </button>
+                <button class="copy-btn" onclick="copyGameLink()" style="background: #2196F3;">
+                    🔗 Copy Invite Link
+                </button>
+            </div>
+            
+            <div class="player-status">
+                <h4>👥 Players</h4>
+                <div id="playerList">
+                    <div class="player-badge player1-badge">Player 1 (You) ✅</div>
+                    <div class="player-badge player2-badge">Player 2 (Waiting...)</div>
+                </div>
+            </div>
+            
+            <div class="chat-box">
+                <h4>💬 Chat</h4>
+                <div class="chat-messages" id="chatMessages">
+                    <div style="color: #888; font-style: italic;">Chat messages will appear here...</div>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" class="chat-input" id="chatInput" placeholder="Type message..." 
+                           onkeypress="if(event.key === 'Enter') sendChatMessage()">
+                    <button onclick="sendChatMessage()" style="background: #666; padding: 10px 20px;">Send</button>
+                </div>
+            </div>
+            
+            <button onclick="leaveGame()" style="background: #f44336; padding: 12px 24px; width: 100%; margin-top: 20px;">
+                🚪 Leave Game
+            </button>
+        </div>
+    </div>
+</div>
+
 <div id="board">
+    <!-- MULTIPLAYER BUTTON -->
+    <button class="multiplayer-btn" onclick="showMultiplayerMenu()" id="multiplayerButton">
+        🌐 Online Play
+    </button>
+
     <!-- PLAYER 2 AREA -->
     <div class="player-area" id="player2Area">
         <!-- DECK CONTAINER (Zone + Button) -->
@@ -1396,6 +1603,348 @@
 </div>
 
 <script>
+// ============================================================================
+// FIREBASE CONFIGURATION - REPLACE THESE VALUES WITH YOURS FROM FIREBASE!
+// ============================================================================
+const firebaseConfig = {
+    apiKey: "YOUR_API_KEY_HERE",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+    projectId: "YOUR_PROJECT",
+    storageBucket: "YOUR_PROJECT.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+
+// ============================================================================
+// MULTIPLAYER STATE
+// ============================================================================
+let multiplayer = {
+    gameId: null,
+    playerId: null,
+    playerNumber: null,
+    opponentNumber: null,
+    isHost: false,
+    isMyTurn: true,
+    lastSyncTime: 0
+};
+
+// ============================================================================
+// MULTIPLAYER FUNCTIONS
+// ============================================================================
+function showMultiplayerMenu() {
+    document.getElementById('multiplayerOverlay').style.display = 'flex';
+}
+
+function closeMultiplayerMenu() {
+    document.getElementById('multiplayerOverlay').style.display = 'none';
+}
+
+function createGame() {
+    // Generate IDs
+    multiplayer.playerId = 'player_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    multiplayer.playerNumber = 1;
+    multiplayer.opponentNumber = 2;
+    multiplayer.isHost = true;
+    multiplayer.isMyTurn = true;
+    
+    // Generate game code
+    multiplayer.gameId = Math.random().toString(36).substr(2, 6).toUpperCase();
+    
+    // Update UI
+    document.getElementById('createGameSection').style.display = 'none';
+    document.getElementById('joinGameSection').style.display = 'none';
+    document.getElementById('gameInfoSection').style.display = 'block';
+    document.getElementById('displayGameCode').textContent = multiplayer.gameId;
+    
+    // Create game in Firebase
+    const gameRef = database.ref('games/' + multiplayer.gameId);
+    gameRef.set({
+        hostId: multiplayer.playerId,
+        players: {
+            [multiplayer.playerId]: {
+                playerNumber: 1,
+                name: "Player 1",
+                connected: true
+            }
+        },
+        gameState: {
+            turn: 1,
+            lastAction: null,
+            lastUpdate: Date.now()
+        },
+        chat: [],
+        createdAt: Date.now()
+    });
+    
+    // Listen for updates
+    gameRef.on('value', handleGameUpdate);
+    
+    showNotification('Game Created!', `Share code: ${multiplayer.gameId}`, 'success');
+    
+    // Enable turn indicator
+    document.getElementById('turnIndicator').style.display = 'block';
+    updateTurnIndicator();
+}
+
+function joinGame() {
+    const code = document.getElementById('gameCodeInput').value.trim().toUpperCase();
+    if (!code || code.length !== 6) {
+        showNotification('Invalid Code', 'Please enter a 6-digit code', 'error');
+        return;
+    }
+    
+    multiplayer.playerId = 'player_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    multiplayer.playerNumber = 2;
+    multiplayer.opponentNumber = 1;
+    multiplayer.isHost = false;
+    multiplayer.isMyTurn = false;
+    multiplayer.gameId = code;
+    
+    const gameRef = database.ref('games/' + code);
+    
+    // Check if game exists
+    gameRef.once('value').then((snapshot) => {
+        if (!snapshot.exists()) {
+            showNotification('Game Not Found', 'Check the code and try again', 'error');
+            return;
+        }
+        
+        const gameData = snapshot.val();
+        const playerCount = Object.keys(gameData.players || {}).length;
+        
+        if (playerCount >= 2) {
+            showNotification('Game Full', 'This game already has 2 players', 'error');
+            return;
+        }
+        
+        // Join game
+        gameRef.update({
+            [`players/${multiplayer.playerId}`]: {
+                playerNumber: 2,
+                name: "Player 2",
+                connected: true
+            },
+            lastUpdate: Date.now()
+        });
+        
+        // Update UI
+        document.getElementById('createGameSection').style.display = 'none';
+        document.getElementById('joinGameSection').style.display = 'none';
+        document.getElementById('gameInfoSection').style.display = 'block';
+        document.getElementById('displayGameCode').textContent = code;
+        
+        // Listen for updates
+        gameRef.on('value', handleGameUpdate);
+        
+        showNotification('Joined Game!', 'Waiting for host...', 'success');
+        disablePlayerControls();
+        
+    }).catch((error) => {
+        showNotification('Error', 'Failed to join game', 'error');
+    });
+}
+
+function handleGameUpdate(snapshot) {
+    if (!snapshot.exists()) {
+        if (multiplayer.gameId) {
+            showNotification('Game Ended', 'Host left the game', 'warning');
+            leaveGame();
+        }
+        return;
+    }
+    
+    const gameData = snapshot.val();
+    
+    // Update player list
+    const playerList = document.getElementById('playerList');
+    playerList.innerHTML = '';
+    
+    Object.values(gameData.players || {}).forEach(player => {
+        const badgeClass = player.playerNumber === 1 ? 'player1-badge' : 'player2-badge';
+        const youText = player.playerNumber === multiplayer.playerNumber ? ' (You)' : '';
+        playerList.innerHTML += `<div class="player-badge ${badgeClass}">Player ${player.playerNumber}${youText} ✅</div>`;
+    });
+    
+    // Update chat
+    if (gameData.chat) {
+        const chatContainer = document.getElementById('chatMessages');
+        chatContainer.innerHTML = '';
+        
+        Object.values(gameData.chat).forEach(msg => {
+            const msgDiv = document.createElement('div');
+            msgDiv.style.margin = '5px 0';
+            msgDiv.style.padding = '8px';
+            msgDiv.style.background = msg.sender === multiplayer.playerNumber ? 'rgba(33, 150, 243, 0.2)' : 'rgba(255, 255, 255, 0.1)';
+            msgDiv.style.borderRadius = '10px';
+            msgDiv.innerHTML = `<strong>Player ${msg.sender}:</strong> ${msg.text}`;
+            chatContainer.appendChild(msgDiv);
+        });
+        
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+    
+    // Update game state
+    if (gameData.gameState) {
+        multiplayer.isMyTurn = (gameData.gameState.turn === multiplayer.playerNumber);
+        updateTurnIndicator();
+        
+        if (multiplayer.isMyTurn) {
+            enablePlayerControls();
+        } else {
+            disablePlayerControls();
+        }
+    }
+}
+
+function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const message = input.value.trim();
+    
+    if (!message || !multiplayer.gameId) return;
+    
+    const chatMessage = {
+        sender: multiplayer.playerNumber,
+        text: message,
+        timestamp: Date.now()
+    };
+    
+    const gameRef = database.ref('games/' + multiplayer.gameId);
+    gameRef.child('chat').push(chatMessage);
+    
+    input.value = '';
+}
+
+function copyGameCode() {
+    navigator.clipboard.writeText(multiplayer.gameId).then(() => {
+        showNotification('Copied!', 'Game code copied to clipboard', 'success');
+    });
+}
+
+function copyGameLink() {
+    const link = window.location.href.split('?')[0] + '?game=' + multiplayer.gameId;
+    navigator.clipboard.writeText(link).then(() => {
+        showNotification('Copied!', 'Invite link copied', 'success');
+    });
+}
+
+function leaveGame() {
+    if (multiplayer.gameId) {
+        const gameRef = database.ref('games/' + multiplayer.gameId);
+        
+        // Remove player
+        gameRef.child('players/' + multiplayer.playerId).remove();
+        
+        // If host leaves, delete game
+        if (multiplayer.isHost) {
+            setTimeout(() => {
+                gameRef.remove();
+            }, 1000);
+        }
+        
+        gameRef.off();
+    }
+    
+    // Reset state
+    multiplayer = {
+        gameId: null,
+        playerId: null,
+        playerNumber: null,
+        opponentNumber: null,
+        isHost: false,
+        isMyTurn: true,
+        lastSyncTime: 0
+    };
+    
+    // Reset UI
+    document.getElementById('createGameSection').style.display = 'block';
+    document.getElementById('joinGameSection').style.display = 'block';
+    document.getElementById('gameInfoSection').style.display = 'none';
+    document.getElementById('turnIndicator').style.display = 'none';
+    
+    // Enable controls
+    enablePlayerControls();
+    
+    showNotification('Left Game', 'You have left the game', 'info');
+}
+
+function updateTurnIndicator() {
+    const indicator = document.getElementById('turnIndicator');
+    if (multiplayer.isMyTurn) {
+        indicator.textContent = '🎮 Your Turn!';
+        indicator.style.background = 'linear-gradient(145deg, #4CAF50, #388E3C)';
+        indicator.style.display = 'block';
+    } else {
+        indicator.textContent = '⏳ Opponent\'s Turn...';
+        indicator.style.background = 'linear-gradient(145deg, #FF9800, #F57C00)';
+        indicator.style.display = 'block';
+    }
+}
+
+function disablePlayerControls() {
+    // Disable game buttons during opponent's turn
+    const buttonsToDisable = [
+        'shuffleBtn1', 'shuffleBtn2',
+        'openBtn1', 'openBtn2',
+        'shopButton'
+    ];
+    
+    buttonsToDisable.forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) btn.disabled = true;
+    });
+    
+    // Disable player controls
+    document.querySelectorAll('#p1Controls button, #p2Controls button').forEach(btn => {
+        if (!btn.onclick || btn.onclick.toString().includes('viewHand')) {
+            btn.disabled = true;
+        }
+    });
+}
+
+function enablePlayerControls() {
+    // Enable all buttons
+    document.querySelectorAll('button').forEach(btn => {
+        btn.disabled = false;
+    });
+}
+
+function sendGameStateUpdate() {
+    if (!multiplayer.gameId || !multiplayer.isMyTurn) return;
+    
+    const gameState = {
+        turn: multiplayer.playerNumber,
+        lastAction: Date.now(),
+        lastUpdate: Date.now()
+    };
+    
+    const gameRef = database.ref('games/' + multiplayer.gameId);
+    gameRef.child('gameState').update(gameState);
+}
+
+// ============================================================================
+// WRAP EXISTING FUNCTIONS FOR SYNC
+// ============================================================================
+function wrapWithSync(originalFunction) {
+    return function(...args) {
+        const result = originalFunction.apply(this, args);
+        
+        // Sync after action
+        if (multiplayer.gameId && multiplayer.isMyTurn) {
+            setTimeout(sendGameStateUpdate, 100);
+        }
+        
+        return result;
+    };
+}
+
+// ============================================================================
+// YOUR ORIGINAL GAME CODE (with multiplayer wrappers)
+// ============================================================================
 // --- STATE MANAGEMENT ---
 let decks = { 1: [], 2: [] };
 let hands = { 1: [], 2: [] };
@@ -1511,9 +2060,6 @@ function showNotification(title, message, type = 'info', duration = 3000) {
     return notification;
 }
 
-// Replace alert() calls with showNotification() throughout the code
-// We'll update key functions to use the new notification system
-
 // --- KEYBOARD SHORTCUTS ---
 document.addEventListener('keydown', function(e) {
     // Process shortcuts if we're dragging a card
@@ -1606,7 +2152,7 @@ function updateDeckVisual(player) {
     }
 }
 
-// --- DRAW CARD WITH ANIMATION - FACE DOWN ---
+// --- DRAW CARD WITH ANIMATION - FACE DOWN (Wrapped for multiplayer) ---
 function drawCardWithAnimation(player) {
     if (decks[player].length === 0) {
         showNotification(
@@ -1659,7 +2205,10 @@ function drawCardWithAnimation(player) {
     }, 600);
 }
 
-// --- SHUFFLE DECK WITH ANIMATION - FACE DOWN ---
+// Wrap for multiplayer
+drawCardWithAnimation = wrapWithSync(drawCardWithAnimation);
+
+// --- SHUFFLE DECK WITH ANIMATION - FACE DOWN (Wrapped for multiplayer) ---
 function shuffleDeckWithAnimation(player) {
     if (decks[player].length === 0) {
         showNotification(
@@ -1736,7 +2285,10 @@ function shuffleDeckWithAnimation(player) {
     }, animationCount * 150 + 300);
 }
 
-// --- OPEN FROM DECK WITH ANIMATION - FACE DOWN DURING ANIMATION ---
+// Wrap for multiplayer
+shuffleDeckWithAnimation = wrapWithSync(shuffleDeckWithAnimation);
+
+// --- OPEN FROM DECK WITH ANIMATION - FACE DOWN DURING ANIMATION (Wrapped) ---
 function openFromDeck(player) {
     if (decks[player].length === 0) {
         showNotification(
@@ -1802,6 +2354,9 @@ function openFromDeck(player) {
         }, 600);
     }, 300);
 }
+
+// Wrap for multiplayer
+openFromDeck = wrapWithSync(openFromDeck);
 
 // --- DECK OVERLAY WITH 5 COLUMNS ---
 function viewDeck(player) {
@@ -2139,6 +2694,9 @@ function shuffleLifeZones(player) {
     );
 }
 
+// Wrap for multiplayer
+shuffleLifeZones = wrapWithSync(shuffleLifeZones);
+
 function removeFromLifeZone() {
     if (!currentZoomSource || currentZoomSource.type !== 'lifezone') return;
     
@@ -2373,7 +2931,7 @@ function filterShopCards(category, event) {
 
 setupShop();
 
-// --- COUNTER TOKEN FUNCTIONS ---
+// --- COUNTER TOKEN FUNCTIONS (Wrapped for multiplayer) ---
 function addTokenToPlayer(player) {
     const playerArea = document.getElementById(`player${player}Area`);
     const tokenCount = counterTokens[player].length;
@@ -2446,6 +3004,9 @@ function addTokenToPlayer(player) {
     );
 }
 
+// Wrap for multiplayer
+addTokenToPlayer = wrapWithSync(addTokenToPlayer);
+
 function changeTokenValue(tokenId, amount) {
     event.stopPropagation(); // Prevent triggering drag
     
@@ -2490,6 +3051,9 @@ function changeTokenValue(tokenId, amount) {
     }
 }
 
+// Wrap for multiplayer
+changeTokenValue = wrapWithSync(changeTokenValue);
+
 function resetPlayerTokens(player) {
     // Remove all token elements
     counterTokens[player].forEach(token => {
@@ -2508,6 +3072,9 @@ function resetPlayerTokens(player) {
         3000
     );
 }
+
+// Wrap for multiplayer
+resetPlayerTokens = wrapWithSync(resetPlayerTokens);
 
 // --- TOKEN DRAG AND DROP ---
 function startTokenDrag(e) {
@@ -2769,6 +3336,10 @@ function rotateCardDirect(cardElement) {
     }
 }
 
+// Wrap for multiplayer
+rotateCard = wrapWithSync(rotateCard);
+rotateCardDirect = wrapWithSync(rotateCardDirect);
+
 // --- DELETE CARD FUNCTIONS ---
 function showDeleteConfirmation() {
     if (!currentZoomSource || currentZoomSource.type !== 'board') return;
@@ -2869,7 +3440,7 @@ function addToDeck(player) {
 document.getElementById("addToDeckP1").onclick = () => addToDeck(1);
 document.getElementById("addToDeckP2").onclick = () => addToDeck(2);
 
-// --- CARD MOVEMENT FUNCTIONS ---
+// --- CARD MOVEMENT FUNCTIONS (Wrapped for multiplayer) ---
 function playToBoard() {
     if (!currentZoomSource || currentZoomSource.type !== 'hand') return;
     
@@ -2894,6 +3465,8 @@ function playToBoard() {
     }
 }
 
+playToBoard = wrapWithSync(playToBoard);
+
 function putToBoardFromGY() {
     if (!currentZoomSource || currentZoomSource.type !== 'graveyard') return;
     
@@ -2915,6 +3488,8 @@ function putToBoardFromGY() {
         );
     }
 }
+
+putToBoardFromGY = wrapWithSync(putToBoardFromGY);
 
 function putToBoardFromDeck() {
     if (!currentZoomSource || currentZoomSource.type !== 'deck') return;
@@ -2938,6 +3513,8 @@ function putToBoardFromDeck() {
         );
     }
 }
+
+putToBoardFromDeck = wrapWithSync(putToBoardFromDeck);
 
 document.getElementById("playToBoard").onclick = playToBoard;
 document.getElementById("putToBoardFromGY").onclick = putToBoardFromGY;
@@ -2971,6 +3548,8 @@ function moveToHand() {
     }
 }
 
+moveToHand = wrapWithSync(moveToHand);
+
 function moveToDeck() {
     if (!currentZoomSource || currentZoomSource.type !== 'board') return;
     
@@ -2996,6 +3575,8 @@ function moveToDeck() {
         );
     }
 }
+
+moveToDeck = wrapWithSync(moveToDeck);
 
 function moveToGY() {
     if (!currentZoomSource) return;
@@ -3035,6 +3616,8 @@ function moveToGY() {
         );
     }
 }
+
+moveToGY = wrapWithSync(moveToGY);
 
 // --- BOARD CARD FUNCTIONS with GY shortcut button ---
 function createBoardCard(cardData, player) {
@@ -3349,9 +3932,26 @@ function closeGraveyard() {
     document.getElementById("graveyardOverlay").style.display = "none"; 
 }
 
-// Initialize counters, deck visuals, and life zones
-updateCounters();
-initializeLifeZones();
+// ============================================================================
+// AUTO-JOIN FROM URL
+// ============================================================================
+window.addEventListener('load', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const gameCode = urlParams.get('game');
+    
+    if (gameCode && gameCode.length === 6) {
+        document.getElementById('gameCodeInput').value = gameCode;
+        showMultiplayerMenu();
+        
+        setTimeout(() => {
+            joinGame();
+        }, 500);
+    }
+    
+    // Initialize counters, deck visuals, and life zones
+    updateCounters();
+    initializeLifeZones();
+});
 
 // Add CSS animation for shuffle success
 const style = document.createElement('style');
