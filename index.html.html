@@ -1,0 +1,3368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Board Game with Card Zoom and Action Buttons</title>
+    <style>
+        /* Styling remains the same as before */
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: #1b1b1b;
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* MAIN BOARD */
+        #board {
+            position: relative;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* PLAYER AREAS */
+        .player-area {
+            flex: 1;
+            display: flex;
+            position: relative;
+            border-top: 2px solid #444; /* separates players */
+            border-bottom: 2px solid #444;
+            margin: 2px 0;
+            overflow: hidden;
+        }
+
+        /* CARD STYLES */
+        .card {
+            width: 120px;
+            height: 180px;
+            border-radius: 6px;
+            background-color: #555;
+            border: 2px solid #000;
+            background-size: cover;
+            background-position: center;
+            cursor: grab;
+            flex-shrink: 0;
+            transition: transform 0.1s, box-shadow 0.2s;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+        }
+        .card.on-board { position: absolute; }
+        .card.dragging { 
+            opacity: 0.8; 
+            cursor: grabbing; 
+            pointer-events: none; 
+            z-index: 9999 !important; 
+            position: fixed !important; 
+            transform: translate(-50%, -50%);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+        }
+
+        /* CONTROLS */
+        .controls { 
+            position: absolute; 
+            left: 160px; /* Moved right to make space for deck zone */
+            z-index: 100; 
+            pointer-events: auto; 
+            background: rgba(0,0,0,0.5); 
+            padding: 5px; 
+            border-radius: 4px; 
+        }
+        #p2Controls { top: 10px; }
+        #p1Controls { bottom: 10px; }
+
+        /* TOKEN CONTROLS (BOTTOM-RIGHT MOST) */
+        .token-controls {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            z-index: 100;
+            pointer-events: auto;
+            background: rgba(0,0,0,0.7);
+            padding: 3px;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 60px;
+            border: 1px solid #666;
+        }
+        
+        .token-controls-top {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            z-index: 100;
+            pointer-events: auto;
+            background: rgba(0,0,0,0.7);
+            padding: 3px;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 60px;
+            border: 1px solid #666;
+        }
+
+        button { margin: 2px; padding: 6px 12px; cursor: pointer; background: #444; color: #fff; border: 1px solid #666; border-radius: 4px; }
+        button:hover { background: #666; }
+        #shopButton { position: absolute; top: 50%; right: 10px; transform: translateY(-50%); z-index: 200; background: #d4af37; color: #000; font-weight: bold; }
+
+        /* SMALLER TOKEN BUTTONS */
+        .small-token-btn {
+            background: #6a0dad;
+            color: white;
+            border: 1px solid #8a2be2;
+            border-radius: 3px;
+            padding: 2px 4px;
+            font-size: 10px;
+            cursor: pointer;
+            margin: 1px;
+            width: 100%;
+            text-align: center;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        
+        .small-token-btn:hover {
+            background: #8a2be2;
+            transform: scale(1.05);
+        }
+        
+        .small-token-reset-btn {
+            background: #d35400;
+            color: white;
+            border: 1px solid #e67e22;
+            border-radius: 3px;
+            padding: 2px 4px;
+            font-size: 10px;
+            cursor: pointer;
+            margin: 1px;
+            width: 100%;
+            text-align: center;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        
+        .small-token-reset-btn:hover {
+            background: #e67e22;
+            transform: scale(1.05);
+        }
+        
+        .token-controls-label {
+            font-size: 9px;
+            text-align: center;
+            color: #aaa;
+            margin-bottom: 1px;
+            font-weight: bold;
+            border-bottom: 1px solid #444;
+            padding-bottom: 2px;
+        }
+
+        /* IMPROVED NOTIFICATION SYSTEM */
+        .notification-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10050;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 300px;
+            pointer-events: none;
+        }
+        
+        .notification {
+            background: rgba(0, 0, 0, 0.85);
+            border-left: 4px solid #4A90E2;
+            border-radius: 6px;
+            padding: 12px 15px;
+            color: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            animation: slideInRight 0.3s ease-out;
+            transform: translateX(0);
+            opacity: 1;
+            transition: all 0.3s ease;
+            pointer-events: auto;
+            backdrop-filter: blur(5px);
+        }
+        
+        .notification.fade-out {
+            opacity: 0;
+            transform: translateX(100%);
+        }
+        
+        .notification.success {
+            border-left-color: #7ED321;
+        }
+        
+        .notification.warning {
+            border-left-color: #F5A623;
+        }
+        
+        .notification.error {
+            border-left-color: #D0021B;
+        }
+        
+        .notification.info {
+            border-left-color: #4A90E2;
+        }
+        
+        .notification-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .notification-message {
+            font-size: 13px;
+            line-height: 1.4;
+            color: #ddd;
+        }
+        
+        .notification-close {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: none;
+            border: none;
+            color: #aaa;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 3px;
+        }
+        
+        .notification-close:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+        
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        /* GRAVEYARD SHORTCUT BUTTON ON BOARD CARDS */
+        .gy-shortcut-btn {
+            position: absolute;
+            bottom: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(40, 167, 69, 0.9);
+            color: white;
+            border: 1px solid #28a745;
+            border-radius: 3px;
+            padding: 2px 6px;
+            font-size: 10px;
+            cursor: pointer;
+            z-index: 25;
+            opacity: 0;
+            transition: opacity 0.2s, transform 0.2s;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            min-width: 40px;
+            text-align: center;
+        }
+        
+        .gy-shortcut-btn:hover {
+            background: rgba(40, 167, 69, 1);
+            transform: translateX(-50%) scale(1.1);
+        }
+        
+        .board-card:hover .gy-shortcut-btn {
+            opacity: 1;
+        }
+        
+        .gy-shortcut-btn:active {
+            transform: translateX(-50%) scale(0.95);
+        }
+
+        /* HAND & SHOP CARD DISPLAY */
+        .hand-display-card, .shop-card { 
+            width: 120px; 
+            height: 180px; 
+            border-radius: 6px; 
+            background-size: cover; 
+            background-position: center; 
+            background-color: #555; /* Fallback color */
+            border: 2px solid #333; 
+            cursor: pointer; 
+            transition: border-color 0.2s; 
+            position: relative;
+            overflow: hidden;
+        }
+        .hand-display-card:hover, .shop-card:hover { border-color: yellow; }
+
+        /* OVERLAYS */
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; z-index: 10000; justify-content: center; align-items: center; flex-direction: column; }
+
+        /* SHOP OVERLAY */
+        #shopWindow { width: 80%; height: 80%; background: #111; border: 2px solid #444; padding: 20px; border-radius: 8px; display: flex; flex-direction: column; }
+        #shopCards { margin-top: 15px; display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; overflow-y: auto; }
+        .category-buttons { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        .category-btn { background: #333; color: white; border: 1px solid #555; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+        .category-btn:hover { background: #555; }
+        .category-btn.active { background: #d4af37; color: #000; font-weight: bold; border-color: #ffd700; }
+
+        /* ZOOM OVERLAY */
+        #zoomOverlay { z-index: 10001; } /* Higher than hand overlay */
+        #zoomCard { width: 360px; height: 540px; background-size: cover; background-position: center; border: 4px solid #fff; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 0 20px rgba(0,0,0,0.8); background-color: #555; }
+
+        /* HAND OVERLAY */
+        #handOverlay { z-index: 10000; }
+        #handOverlayContent { background: #222; padding: 20px; border-radius: 8px; max-width: 90%; max-height: 90%; overflow: auto; }
+        #handCardsContainer { display: grid; grid-template-columns: repeat(auto-fill, 120px); gap: 15px; margin-top: 20px; }
+
+        /* GRAVEYARD ZONES (RIGHT SIDE OF PLAYER AREA) */
+        .graveyard { 
+            width: 140px; 
+            height: 200px; 
+            border: 2px dashed #888; 
+            border-radius: 8px; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            flex-direction: column; 
+            cursor: pointer; 
+            text-align: center; 
+            position: absolute; 
+            right: 20px; 
+            top: 50%; 
+            transform: translateY(-50%); 
+        }
+        .graveyard:hover { border-color: yellow; }
+        .graveyard-count { font-size: 16px; margin-top: 5px; }
+
+        /* DECK ZONES - UPDATED */
+        .deck-container {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            width: 140px;
+        }
+        
+        .deck-zone { 
+            width: 140px; 
+            height: 200px; 
+            border: 2px dashed #666; 
+            border-radius: 8px; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            flex-direction: column; 
+            cursor: pointer; 
+            text-align: center; 
+            background: rgba(50, 50, 50, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .deck-visual {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .deck-card-stack {
+            position: relative;
+            width: 120px;
+            height: 180px;
+        }
+        
+        /* DECK CARD LAYERS - FACE DOWN STYLE */
+        .deck-card-layer {
+            position: absolute;
+            width: 120px;
+            height: 180px;
+            border-radius: 6px;
+            background: linear-gradient(145deg, #1a1a1a, #2c2c2c);
+            border: 2px solid #444;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        /* DECK CARD BACK DESIGN */
+        .deck-card-layer::before {
+            content: '';
+            position: absolute;
+            width: 100px;
+            height: 150px;
+            background: linear-gradient(135deg, #333 0%, #555 50%, #333 100%);
+            border-radius: 4px;
+            border: 2px solid #666;
+        }
+        
+        /* DECK CARD BACK PATTERN */
+        .deck-card-layer::after {
+            content: 'DECK';
+            position: absolute;
+            color: #aaa;
+            font-weight: bold;
+            font-size: 14px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+        }
+        
+        .deck-card-layer:nth-child(1) { 
+            transform: translate(0px, 0px); 
+            background: linear-gradient(145deg, #1a1a1a, #2c2c2c);
+        }
+        .deck-card-layer:nth-child(2) { 
+            transform: translate(2px, 2px); 
+            background: linear-gradient(145deg, #222, #333);
+        }
+        .deck-card-layer:nth-child(3) { 
+            transform: translate(4px, 4px); 
+            background: linear-gradient(145deg, #2a2a2a, #3c3c3c);
+        }
+        .deck-card-layer:nth-child(4) { 
+            transform: translate(6px, 6px); 
+            background: linear-gradient(145deg, #333, #444);
+        }
+        .deck-card-layer:nth-child(5) { 
+            transform: translate(8px, 8px); 
+            background: linear-gradient(145deg, #3a3a3a, #4c4c4c);
+        }
+        
+        .deck-zone.empty .deck-card-layer {
+            display: none;
+        }
+        
+        .deck-zone:hover { 
+            border-color: cyan; 
+            transform: translateY(-2px);
+            transition: all 0.2s;
+        }
+        
+        .deck-count { 
+            font-size: 24px; 
+            font-weight: bold;
+            color: cyan;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 5px 10px;
+            border-radius: 20px;
+            min-width: 40px;
+            text-align: center;
+        }
+        
+        .deck-label {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: cyan;
+            text-align: center;
+        }
+        
+        /* DECK SHUFFLE BUTTON ON DECK ZONE */
+        .deck-shuffle-btn {
+            background: linear-gradient(145deg, #008080, #00aaaa);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            margin-top: 5px;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .deck-shuffle-btn:hover {
+            background: linear-gradient(145deg, #00aaaa, #00cccc);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 10px rgba(0,0,0,0.4);
+        }
+        
+        .deck-shuffle-btn:disabled {
+            background: #555;
+            color: #888;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .deck-shuffle-btn.shuffling {
+            background: linear-gradient(145deg, #ff9900, #ffcc00);
+            animation: shufflePulse 0.5s infinite alternate;
+        }
+        
+        @keyframes shufflePulse {
+            from { box-shadow: 0 0 5px rgba(255, 153, 0, 0.5); }
+            to { box-shadow: 0 0 15px rgba(255, 153, 0, 0.8); }
+        }
+        
+        /* DRAW ANIMATION - FACE DOWN */
+        .draw-animation {
+            position: fixed;
+            width: 120px;
+            height: 180px;
+            border-radius: 6px;
+            background: linear-gradient(145deg, #1a1a1a, #2c2c2c);
+            border: 2px solid #444;
+            z-index: 99999;
+            pointer-events: none;
+            animation: drawCardMove 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        /* DRAW ANIMATION CARD BACK DESIGN */
+        .draw-animation::before {
+            content: '';
+            position: absolute;
+            width: 100px;
+            height: 150px;
+            background: linear-gradient(135deg, #333 0%, #555 50%, #333 100%);
+            border-radius: 4px;
+            border: 2px solid #666;
+        }
+        
+        .draw-animation::after {
+            content: 'DRAW';
+            position: absolute;
+            color: #aaa;
+            font-weight: bold;
+            font-size: 14px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+        }
+        
+        @keyframes drawCardMove {
+            0% {
+                transform: scale(0.8) rotate(-10deg);
+                opacity: 0;
+            }
+            20% {
+                opacity: 1;
+                transform: scale(1.1) rotate(5deg);
+            }
+            100% {
+                transform: translate(var(--target-x), var(--target-y)) scale(1) rotate(0deg);
+                opacity: 0;
+            }
+        }
+        
+        /* OPEN BUTTON */
+        .open-btn {
+            background: linear-gradient(145deg, #008080, #00aaaa);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            text-align: center;
+            margin-top: 5px;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+            transition: all 0.2s;
+        }
+        
+        .open-btn:hover {
+            background: linear-gradient(145deg, #00aaaa, #00cccc);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 10px rgba(0,0,0,0.4);
+        }
+        
+        .open-btn:disabled {
+            background: #555;
+            color: #888;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .open-btn.opening {
+            background: linear-gradient(145deg, #00cccc, #00eeee);
+            animation: openPulse 0.3s infinite alternate;
+        }
+        
+        @keyframes openPulse {
+            from { box-shadow: 0 0 5px rgba(0, 204, 204, 0.5); }
+            to { box-shadow: 0 0 15px rgba(0, 204, 204, 0.8); }
+        }
+
+        /* BOARD CARDS */
+        .board-card {
+            position: absolute;
+            width: 120px;
+            height: 180px;
+            border-radius: 6px;
+            background-size: cover;
+            background-position: center;
+            cursor: move;
+            border: 2px solid #000;
+            z-index: 10;
+            background-color: #555;
+            user-select: none; /* Prevent text selection when dragging */
+            transition: transform 0.3s ease;
+        }
+        
+        /* ROTATED CARD */
+        .board-card.rotated {
+            transform: rotate(-90deg);
+            border-color: #ff9900;
+        }
+        
+        /* CARD CONTROLS */
+        .card-controls {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 5px;
+            z-index: 20;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .board-card:hover .card-controls {
+            opacity: 1;
+        }
+        
+        .card-control-btn {
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            border: 1px solid #666;
+            border-radius: 3px;
+            padding: 3px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            min-width: 40px;
+            text-align: center;
+        }
+        
+        .card-control-btn:hover {
+            background: rgba(50, 50, 50, 0.9);
+        }
+        
+        .rotate-btn {
+            background: rgba(255, 153, 0, 0.8);
+        }
+        
+        .delete-btn {
+            background: rgba(255, 68, 68, 0.8);
+        }
+        
+        .delete-btn:hover {
+            background: rgba(255, 100, 100, 0.9);
+        }
+        
+        /* DELETE ANIMATION */
+        .delete-animation {
+            animation: deleteCard 0.5s ease-out forwards;
+            pointer-events: none;
+        }
+        
+        @keyframes deleteCard {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(0.5);
+                opacity: 0.5;
+            }
+            100% {
+                transform: scale(0) rotate(180deg);
+                opacity: 0;
+            }
+        }
+        
+        /* CONFIRM DELETE OVERLAY */
+        .confirm-delete-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            z-index: 20000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .confirm-delete-box {
+            background: #222;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            max-width: 400px;
+            border: 2px solid #ff4444;
+            box-shadow: 0 0 20px rgba(255, 68, 68, 0.3);
+        }
+        
+        .confirm-delete-box h3 {
+            color: #ff6b6b;
+            margin-top: 0;
+        }
+        
+        .confirm-delete-box p {
+            margin: 20px 0;
+            color: #ddd;
+        }
+        
+        .confirm-delete-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 25px;
+        }
+        
+        .confirm-delete-btn {
+            background: #ff4444;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            min-width: 100px;
+        }
+        
+        .confirm-delete-btn:hover {
+            background: #ff6666;
+        }
+        
+        .cancel-delete-btn {
+            background: #666;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            min-width: 100px;
+        }
+        
+        .cancel-delete-btn:hover {
+            background: #888;
+        }
+        
+        /* COUNTER TOKENS - SMALLER */
+        .counter-token {
+            position: absolute;
+            width: 50px; /* Smaller: was 70px */
+            height: 50px; /* Smaller: was 70px */
+            border-radius: 50%;
+            background: linear-gradient(145deg, #2c2c2c, #1a1a1a);
+            border: 2px solid #444; /* Thinner border */
+            cursor: move;
+            z-index: 30;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+            user-select: none;
+        }
+        
+        .counter-token:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+            border-color: #666;
+        }
+        
+        .counter-token.dragging {
+            opacity: 0.8;
+            cursor: grabbing;
+            pointer-events: none;
+            z-index: 9999 !important;
+            position: fixed !important;
+            transform: translate(-50%, -50%) scale(1.1);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.5);
+        }
+        
+        .counter-value {
+            font-size: 18px; /* Smaller font */
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+        
+        .counter-label {
+            font-size: 8px; /* Smaller font */
+            color: #aaa;
+            margin-top: 1px;
+            text-align: center;
+            max-width: 45px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .counter-controls {
+            display: flex;
+            gap: 3px; /* Smaller gap */
+            margin-top: 2px;
+        }
+        
+        .counter-btn {
+            width: 16px; /* Smaller buttons */
+            height: 16px; /* Smaller buttons */
+            border-radius: 50%;
+            background: #444;
+            border: none;
+            color: white;
+            font-size: 11px; /* Smaller font */
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            padding: 0;
+        }
+        
+        .counter-btn:hover {
+            background: #666;
+        }
+        
+        .counter-btn.minus {
+            background: #ff4444;
+        }
+        
+        .counter-btn.plus {
+            background: #44ff44;
+        }
+        
+        .counter-btn.minus:hover {
+            background: #ff6666;
+        }
+        
+        .counter-btn.plus:hover {
+            background: #66ff66;
+        }
+        
+        /* TOKEN COLORS FOR PLAYERS */
+        .token-p1-1 { border-color: #ff6b6b; }
+        .token-p1-1 .counter-value { color: #ff6b6b; }
+        
+        .token-p1-2 { border-color: #4ecdc4; }
+        .token-p1-2 .counter-value { color: #4ecdc4; }
+        
+        .token-p1-3 { border-color: #ffe66d; }
+        .token-p1-3 .counter-value { color: #ffe66d; }
+        
+        .token-p1-4 { border-color: #95e1d3; }
+        .token-p1-4 .counter-value { color: #95e1d3; }
+        
+        .token-p2-1 { border-color: #ff9a76; }
+        .token-p2-1 .counter-value { color: #ff9a76; }
+        
+        .token-p2-2 { border-color: #a8e6cf; }
+        .token-p2-2 .counter-value { color: #a8e6cf; }
+        
+        .token-p2-3 { border-color: #ffd3b6; }
+        .token-p2-3 .counter-value { color: #ffd3b6; }
+        
+        .token-p2-4 { border-color: #a8d8ea; }
+        .token-p2-4 .counter-value { color: #a8d8ea; }
+        
+        /* QUANTITY SELECTOR */
+        .quantity-selector {
+            background: #222;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            min-width: 300px;
+        }
+        
+        .quantity-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .qty-btn {
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+            background: #444;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            color: white;
+        }
+        
+        .qty-btn:hover {
+            background: #666;
+        }
+        
+        .qty-display {
+            font-size: 24px;
+            font-weight: bold;
+            min-width: 50px;
+        }
+        
+        .quantity-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        /* DECK OVERLAY - UPDATED */
+        #deckOverlayContent { 
+            background: #222; 
+            padding: 20px; 
+            border-radius: 8px; 
+            max-width: 90%; 
+            max-height: 90%; 
+            overflow: auto; 
+        }
+        #deckCardsContainer { 
+            display: grid; 
+            grid-template-columns: repeat(5, 1fr); /* 5 columns */
+            grid-auto-rows: min-content;
+            gap: 10px; 
+            margin-top: 20px; 
+        }
+        
+        .deck-card {
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .deck-card:hover {
+            transform: scale(1.05);
+        }
+        
+        /* DECK CARD ROWS */
+        .deck-card-row {
+            display: contents;
+        }
+        
+        .deck-card:nth-child(5n+1) { grid-column: 1; }
+        .deck-card:nth-child(5n+2) { grid-column: 2; }
+        .deck-card:nth-child(5n+3) { grid-column: 3; }
+        .deck-card:nth-child(5n+4) { grid-column: 4; }
+        .deck-card:nth-child(5n+5) { grid-column: 5; }
+        
+        /* LIFE ZONES */
+        .life-zones-container {
+            position: absolute;
+            top: 10px;
+            right: 160px; /* Position to the left of graveyard */
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            z-index: 10;
+        }
+
+        .life-zone {
+            width: 100px;
+            height: 40px;
+            border: 2px dashed #7ED321;
+            border-radius: 6px;
+            background: rgba(126, 211, 33, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .life-zone:hover {
+            border-color: #9fea5f;
+            background: rgba(126, 211, 33, 0.2);
+        }
+
+        .life-zone.has-card {
+            border-style: solid;
+            border-color: #7ED321;
+            background: rgba(126, 211, 33, 0.3);
+        }
+
+        .life-zone-card {
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            border-radius: 4px;
+            position: relative;
+        }
+        
+        .life-zone-card.flipped {
+            transform: rotateY(180deg);
+            background: linear-gradient(45deg, #333, #666);
+        }
+        
+        .life-zone-card.flipped::after {
+            content: "FACEDOWN";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotateY(180deg);
+            color: white;
+            font-weight: bold;
+            font-size: 8px;
+            text-align: center;
+        }
+
+        .life-zone-number {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            font-size: 10px;
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+
+        .life-zone-label {
+            font-size: 11px;
+            color: #7ED321;
+            font-weight: bold;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+
+        .life-shuffle-btn {
+            background: #7ED321;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            margin-top: 5px;
+            width: 100%;
+        }
+
+        .life-shuffle-btn:hover {
+            background: #9fea5f;
+        }
+        
+        /* LIFE ZONE FLIP BUTTON */
+        .life-zone-flip-btn {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            width: 16px;
+            height: 16px;
+            background: rgba(0, 204, 255, 0.9);
+            color: white;
+            border: none;
+            border-radius: 3px;
+            font-size: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 15;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .life-zone.has-card:hover .life-zone-flip-btn {
+            opacity: 1;
+        }
+        
+        .life-zone-flip-btn:hover {
+            background: rgba(0, 204, 255, 1);
+            transform: scale(1.1);
+        }
+        
+        /* SHOP LIFE BUTTONS */
+        .add-to-life-btn {
+            background: #7ED321;
+            color: white;
+            border: 1px solid #9fea5f;
+            border-radius: 4px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 2px;
+        }
+        
+        .add-to-life-btn:hover {
+            background: #9fea5f;
+        }
+        
+        /* SHUFFLE ANIMATION */
+        .shuffle-animation {
+            position: fixed;
+            width: 120px;
+            height: 180px;
+            border-radius: 6px;
+            background: linear-gradient(145deg, #2c2c2c, #1a1a1a);
+            border: 2px solid #444;
+            z-index: 99999;
+            pointer-events: none;
+            animation: shuffleCard 0.8s ease-out;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        /* SHUFFLE ANIMATION CARD BACK */
+        .shuffle-animation::before {
+            content: '';
+            position: absolute;
+            width: 100px;
+            height: 150px;
+            background: linear-gradient(135deg, #333 0%, #555 50%, #333 100%);
+            border-radius: 4px;
+            border: 2px solid #666;
+        }
+        
+        .shuffle-animation::after {
+            content: 'SHUFFLE';
+            position: absolute;
+            color: #aaa;
+            font-weight: bold;
+            font-size: 12px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+        }
+        
+        @keyframes shuffleCard {
+            0% {
+                transform: translate(var(--start-x), var(--start-y)) scale(1) rotate(0deg);
+                opacity: 1;
+            }
+            30% {
+                transform: translate(calc(var(--start-x) + 50px), calc(var(--start-y) - 100px)) scale(1.1) rotate(180deg);
+                opacity: 0.8;
+            }
+            60% {
+                transform: translate(calc(var(--start-x) - 50px), calc(var(--start-y) + 100px)) scale(1.2) rotate(360deg);
+                opacity: 0.6;
+            }
+            100% {
+                transform: translate(var(--start-x), var(--start-y)) scale(1) rotate(720deg);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- NOTIFICATION CONTAINER -->
+<div class="notification-container" id="notificationContainer"></div>
+
+<div id="board">
+    <!-- PLAYER 2 AREA -->
+    <div class="player-area" id="player2Area">
+        <!-- DECK CONTAINER (Zone + Button) -->
+        <div class="deck-container">
+            <div class="deck-label">Deck P2</div>
+            <div id="deck2" class="deck-zone" onclick="viewDeck(2)">
+                <div class="deck-visual">
+                    <div class="deck-card-stack">
+                        <!-- Deck card layers will be generated here -->
+                    </div>
+                    <span class="deck-count" id="deckCount2">0</span>
+                </div>
+            </div>
+            <button class="deck-shuffle-btn" id="shuffleBtn2" onclick="shuffleDeckWithAnimation(2)" disabled>🔀 Shuffle Deck</button>
+            <button class="open-btn" id="openBtn2" onclick="openFromDeck(2)" disabled>Open from Deck</button>
+        </div>
+        
+        <!-- PLAYER 2 CONTROLS (TOP LEFT) -->
+        <div id="p2Controls" class="controls">
+            <strong>P2</strong> | Hand: <span id="handCount2">0</span>
+            <button onclick="drawCardWithAnimation(2)">Draw</button>
+            <button onclick="viewHand(2)">View Hand</button>
+        </div>
+        
+        <!-- PLAYER 2 TOKEN CONTROLS (TOP-RIGHT MOST) -->
+        <div class="token-controls-top">
+            <div class="token-controls-label">P2 Tokens</div>
+            <button class="small-token-btn" onclick="addTokenToPlayer(2)">Token</button>
+            <button class="small-token-reset-btn" onclick="resetPlayerTokens(2)">Reset</button>
+        </div>
+        
+        <!-- LIFE ZONES -->
+        <div class="life-zones-container">
+            <div class="life-zone-label">Life Zones</div>
+            <div id="lifeZones2" class="life-zones">
+                <!-- Life zones will be generated here -->
+            </div>
+            <button class="life-shuffle-btn" onclick="shuffleLifeZones(2)">🔀 Shuffle Life Zones</button>
+        </div>
+        
+        <!-- GRAVEYARD ZONE -->
+        <div id="gy2" class="graveyard" onclick="viewGraveyard(2)">
+            <span>Graveyard P2</span>
+            <span class="graveyard-count" id="gyCount2">0</span>
+        </div>
+    </div>
+
+    <!-- PLAYER 1 AREA -->
+    <div class="player-area" id="player1Area">
+        <!-- DECK CONTAINER (Zone + Button) -->
+        <div class="deck-container">
+            <div class="deck-label">Deck P1</div>
+            <div id="deck1" class="deck-zone" onclick="viewDeck(1)">
+                <div class="deck-visual">
+                    <div class="deck-card-stack">
+                        <!-- Deck card layers will be generated here -->
+                    </div>
+                    <span class="deck-count" id="deckCount1">0</span>
+                </div>
+            </div>
+            <button class="deck-shuffle-btn" id="shuffleBtn1" onclick="shuffleDeckWithAnimation(1)" disabled>🔀 Shuffle Deck</button>
+            <button class="open-btn" id="openBtn1" onclick="openFromDeck(1)" disabled>Open from Deck</button>
+        </div>
+        
+        <!-- PLAYER 1 CONTROLS (BOTTOM LEFT) -->
+        <div id="p1Controls" class="controls">
+            <strong>P1</strong> | Hand: <span id="handCount1">0</span>
+            <button onclick="drawCardWithAnimation(1)">Draw</button>
+            <button onclick="viewHand(1)">View Hand</button>
+        </div>
+        
+        <!-- PLAYER 1 TOKEN CONTROLS (BOTTOM-RIGHT MOST) -->
+        <div class="token-controls">
+            <div class="token-controls-label">P1 Tokens</div>
+            <button class="small-token-btn" onclick="addTokenToPlayer(1)">Token</button>
+            <button class="small-token-reset-btn" onclick="resetPlayerTokens(1)">Reset</button>
+        </div>
+        
+        <!-- LIFE ZONES -->
+        <div class="life-zones-container">
+            <div class="life-zone-label">Life Zones</div>
+            <div id="lifeZones1" class="life-zones">
+                <!-- Life zones will be generated here -->
+            </div>
+            <button class="life-shuffle-btn" onclick="shuffleLifeZones(1)">🔀 Shuffle Life Zones</button>
+        </div>
+        
+        <!-- GRAVEYARD ZONE -->
+        <div id="gy1" class="graveyard" onclick="viewGraveyard(1)">
+            <span>Graveyard P1</span>
+            <span class="graveyard-count" id="gyCount1">0</span>
+        </div>
+    </div>
+
+    <button id="shopButton" onclick="openShop()">🛍️ Shop</button>
+</div>
+
+<!-- SHOP OVERLAY -->
+<div id="shopOverlay" class="overlay" style="align-items: stretch;">
+    <div id="shopWindow">
+        <div style="display:flex; justify-content:space-between;">
+            <h2>Card Shop</h2> 
+            <button onclick="closeShop()" style="background:#c00">Close</button>
+        </div>
+        
+        <!-- CATEGORY BUTTONS -->
+        <div class="category-buttons">
+            <button class="category-btn active" onclick="filterShopCards('all', event)">All Cards</button>
+            <button class="category-btn" onclick="filterShopCards('avatar', event)">Avatar</button>
+            <button class="category-btn" onclick="filterShopCards('magic', event)">Magic</button>
+            <button class="category-btn" onclick="filterShopCards('construct', event)">Construct</button>
+            <button class="category-btn" onclick="filterShopCards('life', event)">Life</button>
+        </div>
+        
+        <!-- SPECIAL BUTTONS FOR LIFE CATEGORY -->
+        <div id="lifeCategoryButtons" style="display: none; gap: 10px; margin-bottom: 15px;">
+            <button class="add-to-life-btn" onclick="addToLifeZone(1)">Add to P1 Life Zone</button>
+            <button class="add-to-life-btn" onclick="addToLifeZone(2)">Add to P2 Life Zone</button>
+        </div>
+        
+        <div id="shopCards"></div>
+    </div>
+</div>
+
+<!-- QUANTITY SELECTOR OVERLAY -->
+<div id="quantityOverlay" class="overlay">
+    <div class="quantity-selector">
+        <h3>Add Cards to Deck</h3>
+        <div id="quantityCardPreview" style="width: 120px; height: 180px; margin: 0 auto 20px; background-size: cover; border-radius: 6px;"></div>
+        <p>How many copies do you want to add?</p>
+        
+        <div class="quantity-controls">
+            <button class="qty-btn" onclick="changeQuantity(-1)">-</button>
+            <div class="qty-display" id="quantityDisplay">1</div>
+            <button class="qty-btn" onclick="changeQuantity(1)">+</button>
+        </div>
+        
+        <div class="quantity-actions">
+            <button id="addToP1DeckQty" style="background:#448;">Add to P1 Deck</button>
+            <button id="addToP2DeckQty" style="background:#844;">Add to P2 Deck</button>
+            <button onclick="closeQuantitySelector()" style="background:#c00">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- ZOOM OVERLAY -->
+<div id="zoomOverlay" class="overlay">
+    <div id="zoomCard"></div>
+    <div style="display:flex; gap:10px; flex-wrap: wrap; justify-content: center;">
+        <button id="addToDeckP1" style="background:#448;">Add to P1 Deck</button>
+        <button id="addToDeckP2" style="background:#844;">Add to P2 Deck</button>
+        <button id="playToBoard" style="background:#282;">Play</button>
+        <button id="moveToHand" style="background:#448;">Put to Hand</button>
+        <button id="moveToDeck" style="background:#844;">Put to Deck</button>
+        <button id="moveToGY" style="background:#282;">Send to GY</button>
+        <!-- BUTTON FOR GRAVEYARD -->
+        <button id="putToBoardFromGY" style="background:#8B4513; display:none;">Put to Board</button>
+        <!-- NEW BUTTON FOR DECK -->
+        <button id="putToBoardFromDeck" style="background:#008080; display:none;">Put to Board</button>
+        <!-- ROTATE BUTTON FOR BOARD CARDS -->
+        <button id="rotateCardBtn" style="background:#ff9900; display:none;" onclick="rotateCard()">Rotate</button>
+        <!-- NEW BUTTON FOR LIFE ZONE -->
+        <button id="removeFromLifeZone" style="background:#d35400; display:none;" onclick="removeFromLifeZone()">Remove from Life Zone</button>
+        <!-- NEW BUTTON FOR LIFE ZONE FLIP -->
+        <button id="flipLifeZoneCard" style="background:#00ccff; display:none;" onclick="flipLifeZoneCard()">Flip Card</button>
+        <!-- NEW DELETE BUTTON FOR BOARD CARDS -->
+        <button id="deleteCardBtn" style="background:#ff4444; display:none;" onclick="showDeleteConfirmation()">Delete</button>
+        <button onclick="closeZoomOnly()">Close</button>
+    </div>
+</div>
+
+<!-- CONFIRM DELETE OVERLAY -->
+<div id="confirmDeleteOverlay" class="confirm-delete-overlay">
+    <div class="confirm-delete-box">
+        <h3>⚠️ Delete Card</h3>
+        <p>Are you sure you want to delete this card?</p>
+        <p><strong>This action cannot be undone!</strong></p>
+        <p>The card will be permanently removed from the board.</p>
+        
+        <div class="confirm-delete-actions">
+            <button class="confirm-delete-btn" onclick="confirmDeleteCard()">Yes, Delete</button>
+            <button class="cancel-delete-btn" onclick="cancelDeleteCard()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- HAND OVERLAY -->
+<div id="handOverlay" class="overlay">
+    <div id="handOverlayContent">
+        <h2 id="handTitle">Cards</h2>
+        <div id="handCardsContainer"></div>
+        <button onclick="closeHand()">Close</button>
+    </div>
+</div>
+
+<!-- DECK OVERLAY -->
+<div id="deckOverlay" class="overlay">
+    <div id="deckOverlayContent">
+        <h2 id="deckTitle">Deck</h2>
+        <div id="deckCardsContainer"></div>
+        <button onclick="closeDeck()">Close</button>
+    </div>
+</div>
+
+<!-- GRAVEYARD OVERLAY -->
+<div id="graveyardOverlay" class="overlay">
+    <div id="graveyardOverlayContent" style="background: #222; padding: 20px; border-radius: 8px; max-width: 90%; max-height: 90%; overflow: auto;">
+        <h2 id="graveyardTitle">Graveyard</h2>
+        <div id="graveyardCardsContainer" style="display: grid; grid-template-columns: repeat(auto-fill, 120px); gap: 15px; margin-top: 20px;"></div>
+        <button onclick="closeGraveyard()">Close</button>
+    </div>
+</div>
+
+<script>
+// --- STATE MANAGEMENT ---
+let decks = { 1: [], 2: [] };
+let hands = { 1: [], 2: [] };
+let graveyards = { 1: [], 2: [] };
+let boardCards = []; // Cards currently on the board
+let counterTokens = { 1: [], 2: [] }; // Counter tokens for each player
+let lifeZones = { 1: Array(5).fill(null), 2: Array(5).fill(null) }; // NEW: Life zones for each player
+let currentZoomImage = "";
+let currentZoomSource = null;
+let cardToDelete = null; // Store card to delete during confirmation
+
+let dragState = {
+    isDragging: false,
+    card: null,
+    originalCard: null,
+    originalParent: null,
+    originalLeft: 0,
+    originalTop: 0,
+    ghostCard: null,
+    startX: 0,
+    startY: 0,
+    mouseDownTime: 0,
+    clickThreshold: 200,
+    lastDraggedCard: null,
+    draggingToken: false
+};
+
+// --- QUANTITY SELECTOR STATE ---
+let quantitySelectorState = {
+    image: "",
+    category: "",
+    quantity: 1
+};
+
+// --- SHOP STATE ---
+let currentShopCategory = 'all';
+let currentShopImage = null;
+
+// --- CARD CATEGORIES ---
+const CARD_CATEGORIES = {
+    avatar: {
+        name: "Avatar",
+        folder: "Taling/Avatar/",
+        prefix: "avatar",
+        count: 484,
+        color: "#4A90E2"
+    },
+    magic: {
+        name: "Magic",
+        folder: "Taling/Magic/",
+        prefix: "magic",
+        count: 219,
+        color: "#9013FE"
+    },
+    construct: {
+        name: "Construct",
+        folder: "Taling/Construct/",
+        prefix: "con",
+        count: 18,
+        color: "#F5A623"
+    },
+    life: {
+        name: "Life",
+        folder: "Taling/Life/",
+        prefix: "life",
+        count: 48,
+        color: "#7ED321"
+    }
+};
+
+// TOKEN COLORS FOR EACH PLAYER
+const TOKEN_COLORS = {
+    1: ['#ff6b6b', '#4ecdc4', '#ffe66d', '#95e1d3'],
+    2: ['#ff9a76', '#a8e6cf', '#ffd3b6', '#a8d8ea']
+};
+
+const TOKEN_LABELS = ['Health', 'Mana', 'Attack', 'Defense'];
+
+const IMAGE_EXT = ".png";
+let allShopCards = [];
+
+// --- IMPROVED NOTIFICATION SYSTEM ---
+function showNotification(title, message, type = 'info', duration = 3000) {
+    const container = document.getElementById('notificationContainer');
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    
+    const icon = type === 'success' ? '✓' : 
+                 type === 'warning' ? '⚠' : 
+                 type === 'error' ? '✗' : 
+                 'ℹ';
+    
+    notification.innerHTML = `
+        <button class="notification-close" onclick="this.parentElement.classList.add('fade-out')">×</button>
+        <div class="notification-title">${icon} ${title}</div>
+        <div class="notification-message">${message}</div>
+    `;
+    
+    container.appendChild(notification);
+    
+    // Auto-remove after duration
+    if (duration > 0) {
+        setTimeout(() => {
+            notification.classList.add('fade-out');
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 300);
+        }, duration);
+    }
+    
+    return notification;
+}
+
+// Replace alert() calls with showNotification() throughout the code
+// We'll update key functions to use the new notification system
+
+// --- KEYBOARD SHORTCUTS ---
+document.addEventListener('keydown', function(e) {
+    // Process shortcuts if we're dragging a card
+    if (dragState.isDragging && dragState.lastDraggedCard) {
+        const cardId = dragState.lastDraggedCard.id;
+        const cardIndex = boardCards.findIndex(c => c.id === cardId);
+        
+        if (cardIndex > -1) {
+            const cardElement = boardCards[cardIndex].element;
+            
+            switch(e.key.toLowerCase()) {
+                case 'r': // Rotate card
+                    e.preventDefault();
+                    rotateCardDirect(cardElement);
+                    break;
+                    
+                case 'delete': // Delete card
+                case 'd':
+                    e.preventDefault();
+                    showDeleteConfirmationForCard(cardElement.id);
+                    break;
+                    
+                case 'g': // Send to graveyard
+                    e.preventDefault();
+                    sendToGraveyardShortcut(cardElement.id);
+                    break;
+                    
+                case 'escape': // Cancel drag
+                    e.preventDefault();
+                    cancelDrag();
+                    break;
+            }
+        }
+    }
+});
+
+// --- GRAVEYARD SHORTCUT FUNCTION ---
+function sendToGraveyardShortcut(cardId) {
+    const cardIndex = boardCards.findIndex(card => card.id === cardId);
+    
+    if (cardIndex > -1) {
+        const cardData = boardCards[cardIndex];
+        const player = cardData.player;
+        
+        // Remove from board
+        boardCards.splice(cardIndex, 1);
+        document.getElementById(cardId)?.remove();
+        
+        // Add to graveyard
+        graveyards[player].push(cardData);
+        updateCounters();
+        
+        showNotification(
+            "Card Sent to Graveyard",
+            `Card sent to Player ${player}'s graveyard`,
+            'info',
+            2000
+        );
+    }
+}
+
+// --- DECK VISUAL FUNCTIONS - FACE DOWN ---
+function updateDeckVisual(player) {
+    const deckZone = document.getElementById(`deck${player}`);
+    const deckCount = decks[player].length;
+    const deckStack = deckZone.querySelector('.deck-card-stack');
+    
+    // Update count
+    document.getElementById(`deckCount${player}`).textContent = deckCount;
+    
+    // Update deck visual
+    if (deckCount === 0) {
+        deckZone.classList.add('empty');
+        document.getElementById(`shuffleBtn${player}`).disabled = true;
+        document.getElementById(`openBtn${player}`).disabled = true;
+    } else {
+        deckZone.classList.remove('empty');
+        document.getElementById(`shuffleBtn${player}`).disabled = false;
+        document.getElementById(`openBtn${player}`).disabled = false;
+        
+        // Create card stack layers (max 5 layers) - FACE DOWN
+        deckStack.innerHTML = '';
+        const layers = Math.min(5, deckCount);
+        
+        for (let i = 0; i < layers; i++) {
+            const layer = document.createElement('div');
+            layer.className = 'deck-card-layer';
+            deckStack.appendChild(layer);
+        }
+    }
+}
+
+// --- DRAW CARD WITH ANIMATION - FACE DOWN ---
+function drawCardWithAnimation(player) {
+    if (decks[player].length === 0) {
+        showNotification(
+            "Deck Empty",
+            "Open Shop to add cards to your deck!",
+            'warning',
+            3000
+        );
+        return;
+    }
+    
+    const cardData = decks[player].shift();
+    const deckZone = document.getElementById(`deck${player}`);
+    const deckRect = deckZone.getBoundingClientRect();
+    
+    // Get target position (controls area for hand)
+    const controls = document.getElementById(`p${player}Controls`);
+    const controlsRect = controls.getBoundingClientRect();
+    
+    // Create animation element - FACE DOWN
+    const animCard = document.createElement('div');
+    animCard.className = 'draw-animation';
+    
+    // Set animation properties
+    const startX = deckRect.left + deckRect.width / 2 - 60;
+    const startY = deckRect.top + deckRect.height / 2 - 90;
+    const targetX = controlsRect.left - startX + 50;
+    const targetY = controlsRect.top - startY + 10;
+    
+    animCard.style.setProperty('--target-x', `${targetX}px`);
+    animCard.style.setProperty('--target-y', `${targetY}px`);
+    animCard.style.left = `${startX}px`;
+    animCard.style.top = `${startY}px`;
+    
+    document.body.appendChild(animCard);
+    
+    // Add card to hand after animation (face up in hand)
+    setTimeout(() => {
+        hands[player].push(cardData);
+        updateCounters();
+        updateDeckVisual(player);
+        animCard.remove();
+        
+        showNotification(
+            "Card Drawn",
+            `Player ${player} drew 1 card from deck`,
+            'success',
+            2000
+        );
+    }, 600);
+}
+
+// --- SHUFFLE DECK WITH ANIMATION - FACE DOWN ---
+function shuffleDeckWithAnimation(player) {
+    if (decks[player].length === 0) {
+        showNotification(
+            "Deck Empty",
+            "There are no cards to shuffle!",
+            'warning',
+            3000
+        );
+        return;
+    }
+    
+    const deckZone = document.getElementById(`deck${player}`);
+    const shuffleBtn = document.getElementById(`shuffleBtn${player}`);
+    const deckRect = deckZone.getBoundingClientRect();
+    
+    // Disable button and show animation
+    shuffleBtn.disabled = true;
+    shuffleBtn.classList.add('shuffling');
+    shuffleBtn.textContent = "🔀 Shuffling...";
+    
+    // Create multiple shuffle animations - FACE DOWN
+    const animationCount = Math.min(5, decks[player].length);
+    
+    for (let i = 0; i < animationCount; i++) {
+        setTimeout(() => {
+            const animCard = document.createElement('div');
+            animCard.className = 'shuffle-animation';
+            
+            const startX = deckRect.left + deckRect.width / 2 - 60;
+            const startY = deckRect.top + deckRect.height / 2 - 90;
+            
+            animCard.style.setProperty('--start-x', `${startX}px`);
+            animCard.style.setProperty('--start-y', `${startY}px`);
+            animCard.style.left = `${startX}px`;
+            animCard.style.top = `${startY}px`;
+            
+            document.body.appendChild(animCard);
+            
+            // Remove animation element after completion
+            setTimeout(() => {
+                animCard.remove();
+            }, 800);
+        }, i * 150);
+    }
+    
+    // Shuffle the deck after animations
+    setTimeout(() => {
+        decks[player].sort(() => Math.random() - 0.5);
+        updateDeckVisual(player);
+        
+        // Re-enable button
+        shuffleBtn.disabled = false;
+        shuffleBtn.classList.remove('shuffling');
+        shuffleBtn.textContent = "🔀 Shuffle Deck";
+        
+        // Show feedback
+        const deckZone = document.getElementById(`deck${player}`);
+        deckZone.style.animation = 'none';
+        setTimeout(() => {
+            deckZone.style.animation = 'shuffleSuccess 0.5s ease';
+        }, 10);
+        
+        // Remove animation after completion
+        setTimeout(() => {
+            deckZone.style.animation = '';
+        }, 500);
+        
+        showNotification(
+            "Deck Shuffled",
+            `Player ${player}'s deck has been shuffled`,
+            'success',
+            2000
+        );
+    }, animationCount * 150 + 300);
+}
+
+// --- OPEN FROM DECK WITH ANIMATION - FACE DOWN DURING ANIMATION ---
+function openFromDeck(player) {
+    if (decks[player].length === 0) {
+        showNotification(
+            "Deck Empty",
+            "Open Shop to add cards to your deck!",
+            'warning',
+            3000
+        );
+        return;
+    }
+    
+    const openBtn = document.getElementById(`openBtn${player}`);
+    const deckZone = document.getElementById(`deck${player}`);
+    const deckRect = deckZone.getBoundingClientRect();
+    
+    // Button animation
+    openBtn.classList.add('opening');
+    openBtn.textContent = "Opening...";
+    openBtn.disabled = true;
+    
+    // Get random position in player area for board placement
+    const playerArea = document.getElementById(`player${player}Area`);
+    const playerRect = playerArea.getBoundingClientRect();
+    
+    // Create animation element - FACE DOWN
+    setTimeout(() => {
+        const cardData = decks[player].shift();
+        
+        const animCard = document.createElement('div');
+        animCard.className = 'draw-animation';
+        
+        // Set animation properties
+        const startX = deckRect.left + deckRect.width / 2 - 60;
+        const startY = deckRect.top + deckRect.height / 2 - 90;
+        const targetX = 150 + Math.random() * 50;
+        const targetY = Math.random() * (playerRect.height - 180);
+        
+        animCard.style.setProperty('--target-x', `${targetX}px`);
+        animCard.style.setProperty('--target-y', `${targetY}px`);
+        animCard.style.left = `${startX}px`;
+        animCard.style.top = `${startY}px`;
+        
+        document.body.appendChild(animCard);
+        
+        // Create board card after animation (face up on board)
+        setTimeout(() => {
+            createBoardCard(cardData, player);
+            updateCounters();
+            updateDeckVisual(player);
+            animCard.remove();
+            
+            // Reset button
+            openBtn.classList.remove('opening');
+            openBtn.textContent = "Open from Deck";
+            openBtn.disabled = decks[player].length === 0;
+            
+            showNotification(
+                "Card Opened",
+                `Player ${player} opened a card from deck to board`,
+                'success',
+                2000
+            );
+        }, 600);
+    }, 300);
+}
+
+// --- DECK OVERLAY WITH 5 COLUMNS ---
+function viewDeck(player) {
+    const overlay = document.getElementById("deckOverlay");
+    const container = document.getElementById("deckCardsContainer");
+    document.getElementById("deckTitle").textContent = `Player ${player}'s Deck (${decks[player].length} Cards)`;
+    container.innerHTML = "";
+
+    // Clear any existing rows
+    container.innerHTML = '';
+    
+    // Create a row container for each group of 5 cards
+    decks[player].forEach((cardData, index) => {
+        const card = document.createElement("div");
+        card.className = "hand-display-card deck-card";
+        
+        const img = new Image();
+        img.onload = function() {
+            card.style.backgroundImage = `url('${cardData.image}')`;
+        };
+        img.onerror = function() {
+            card.style.backgroundColor = cardData.color || "#555";
+        };
+        img.src = cardData.image;
+        
+        if (cardData.color) {
+            card.style.borderColor = cardData.color;
+            card.style.borderWidth = "3px";
+        }
+        
+        const positionBadge = document.createElement("div");
+        positionBadge.style.position = "absolute";
+        positionBadge.style.top = "5px";
+        positionBadge.style.left = "5px";
+        positionBadge.style.background = "rgba(0,0,0,0.7)";
+        positionBadge.style.color = "white";
+        positionBadge.style.padding = "2px 6px";
+        positionBadge.style.borderRadius = "10px";
+        positionBadge.style.fontSize = "10px";
+        positionBadge.style.fontWeight = "bold";
+        positionBadge.textContent = `#${index + 1}`;
+        card.appendChild(positionBadge);
+        
+        card.onclick = () => {
+            showCardZoom(cardData.image, { 
+                type: 'deck', 
+                player: player, 
+                cardIndex: index 
+            });
+        };
+        
+        container.appendChild(card);
+    });
+
+    overlay.style.display = "flex";
+}
+
+// --- LIFE ZONE FUNCTIONS ---
+function initializeLifeZones() {
+    // Create 5 life zones for each player
+    for (let player of [1, 2]) {
+        const container = document.getElementById(`lifeZones${player}`);
+        container.innerHTML = '';
+        
+        for (let i = 0; i < 5; i++) {
+            const zone = document.createElement('div');
+            zone.className = 'life-zone';
+            zone.id = `lifeZone_${player}_${i}`;
+            zone.setAttribute('data-player', player);
+            zone.setAttribute('data-index', i);
+            
+            // Add zone number indicator
+            const number = document.createElement('div');
+            number.className = 'life-zone-number';
+            number.textContent = `L${i + 1}`;
+            zone.appendChild(number);
+            
+            // Add drop event listeners
+            zone.addEventListener('dragover', handleLifeZoneDragOver);
+            zone.addEventListener('drop', handleLifeZoneDrop);
+            
+            container.appendChild(zone);
+        }
+    }
+}
+
+function handleLifeZoneDragOver(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (dragState.isDragging && !dragState.draggingToken) {
+        e.currentTarget.style.borderColor = '#9fea5f';
+        e.currentTarget.style.boxShadow = '0 0 10px rgba(126, 211, 33, 0.5)';
+    }
+}
+
+function handleLifeZoneDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!dragState.isDragging || dragState.draggingToken) return;
+    
+    const zone = e.currentTarget;
+    const player = parseInt(zone.getAttribute('data-player'));
+    const index = parseInt(zone.getAttribute('data-index'));
+    
+    // Reset zone styling
+    zone.style.borderColor = '';
+    zone.style.boxShadow = '';
+    
+    // Get the dragged card
+    if (dragState.originalCard && dragState.originalCard.classList.contains('board-card')) {
+        const cardId = dragState.originalCard.id;
+        const cardIndex = boardCards.findIndex(card => card.id === cardId);
+        
+        if (cardIndex > -1) {
+            const cardData = boardCards[cardIndex];
+            
+            // Check if zone already has a card
+            if (lifeZones[player][index]) {
+                // Return existing card to board
+                returnCardFromLifeZone(player, index);
+            }
+            
+            // Remove card from board
+            boardCards.splice(cardIndex, 1);
+            dragState.originalCard.remove();
+            
+            // Add card to life zone
+            lifeZones[player][index] = {
+                ...cardData,
+                flipped: false // Initialize flipped state
+            };
+            updateLifeZoneDisplay(player, index, lifeZones[player][index]);
+            
+            // Cancel drag state
+            cancelDrag();
+            
+            showNotification(
+                "Card Added to Life Zone",
+                `Card added to Life Zone ${index + 1} for Player ${player}`,
+                'success',
+                3000
+            );
+            return;
+        }
+    }
+    
+    // Check if dragging from hand (through zoom overlay)
+    if (currentZoomSource && currentZoomSource.type === 'hand') {
+        const player = currentZoomSource.player;
+        const cardId = currentZoomSource.cardId;
+        const cardIndex = hands[player].findIndex(card => card.id === cardId);
+        
+        if (cardIndex > -1) {
+            const cardData = hands[player][cardIndex];
+            
+            // Check if zone already has a card
+            if (lifeZones[player][index]) {
+                showNotification(
+                    "Life Zone Full",
+                    `Life Zone ${index + 1} already has a card!`,
+                    'warning',
+                    3000
+                );
+                return;
+            }
+            
+            // Remove from hand
+            hands[player].splice(cardIndex, 1);
+            
+            // Add to life zone
+            lifeZones[player][index] = {
+                ...cardData,
+                flipped: false
+            };
+            updateLifeZoneDisplay(player, index, lifeZones[player][index]);
+            
+            // Update counters and close zoom
+            updateCounters();
+            closeZoomOnly();
+            
+            showNotification(
+                "Card Added to Life Zone",
+                `Card added to Life Zone ${index + 1} for Player ${player}`,
+                'success',
+                3000
+            );
+            return;
+        }
+    }
+}
+
+function updateLifeZoneDisplay(player, index, cardData) {
+    const zone = document.getElementById(`lifeZone_${player}_${index}`);
+    if (!zone) return;
+    
+    // Clear existing content
+    zone.innerHTML = '';
+    
+    // Add zone number indicator
+    const number = document.createElement('div');
+    number.className = 'life-zone-number';
+    number.textContent = `L${index + 1}`;
+    zone.appendChild(number);
+    
+    if (cardData) {
+        zone.classList.add('has-card');
+        
+        // Create card display
+        const cardDisplay = document.createElement('div');
+        cardDisplay.className = 'life-zone-card';
+        
+        if (cardData.flipped) {
+            cardDisplay.classList.add('flipped');
+        } else {
+            cardDisplay.style.backgroundImage = `url('${cardData.image}')`;
+        }
+        
+        cardDisplay.title = `Life Zone ${index + 1}: Click to view`;
+        
+        // Add click to view
+        cardDisplay.onclick = (e) => {
+            e.stopPropagation();
+            if (cardData.flipped) {
+                // If flipped, show the back side
+                showCardZoom(cardData.image, {
+                    type: 'lifezone',
+                    player: player,
+                    zoneIndex: index,
+                    cardId: cardData.id,
+                    flipped: true
+                });
+            } else {
+                showCardZoom(cardData.image, {
+                    type: 'lifezone',
+                    player: player,
+                    zoneIndex: index,
+                    cardId: cardData.id,
+                    flipped: false
+                });
+            }
+        };
+        
+        zone.appendChild(cardDisplay);
+        
+        // Add flip button (only visible when hovering over zone with card)
+        const flipBtn = document.createElement('button');
+        flipBtn.className = 'life-zone-flip-btn';
+        flipBtn.innerHTML = '↻';
+        flipBtn.title = 'Flip card';
+        flipBtn.onclick = (e) => {
+            e.stopPropagation();
+            flipLifeZoneCardDirect(player, index);
+        };
+        zone.appendChild(flipBtn);
+        
+    } else {
+        zone.classList.remove('has-card');
+        // Empty zone - just show the number
+    }
+}
+
+function flipLifeZoneCardDirect(player, index) {
+    const cardData = lifeZones[player][index];
+    if (!cardData) return;
+    
+    cardData.flipped = !cardData.flipped;
+    updateLifeZoneDisplay(player, index, cardData);
+    
+    const status = cardData.flipped ? "flipped face-down" : "flipped face-up";
+    showNotification(
+        "Card Flipped",
+        `Life Zone ${index + 1} card ${status}`,
+        'info',
+        2000
+    );
+}
+
+function returnCardFromLifeZone(player, index) {
+    const cardData = lifeZones[player][index];
+    if (!cardData) return;
+    
+    // Reset flipped state when returning to board
+    const cardDataForBoard = { ...cardData, flipped: false, rotated: false };
+    
+    // Return card to board
+    createBoardCard(cardDataForBoard, player);
+    lifeZones[player][index] = null;
+    updateLifeZoneDisplay(player, index, null);
+    
+    showNotification(
+        "Card Returned to Board",
+        `Card returned from Life Zone ${index + 1} to board`,
+        'info',
+        3000
+    );
+}
+
+function shuffleLifeZones(player) {
+    const zones = lifeZones[player];
+    const cards = zones.filter(card => card !== null);
+    
+    if (cards.length <= 1) {
+        showNotification(
+            "Not Enough Cards",
+            `Player ${player} needs at least 2 cards in life zones to shuffle!`,
+            'warning',
+            3000
+        );
+        return;
+    }
+    
+    // Shuffle the cards
+    for (let i = cards.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [cards[i], cards[j]] = [cards[j], cards[i]];
+    }
+    
+    // Redistribute cards back to zones
+    let cardIndex = 0;
+    for (let i = 0; i < zones.length; i++) {
+        if (zones[i] !== null) {
+            lifeZones[player][i] = cards[cardIndex];
+            updateLifeZoneDisplay(player, i, cards[cardIndex]);
+            cardIndex++;
+        }
+    }
+    
+    showNotification(
+        "Life Zones Shuffled",
+        `Player ${player}'s life zones have been shuffled!`,
+        'success',
+        3000
+    );
+}
+
+function removeFromLifeZone() {
+    if (!currentZoomSource || currentZoomSource.type !== 'lifezone') return;
+    
+    const player = currentZoomSource.player;
+    const zoneIndex = currentZoomSource.zoneIndex;
+    
+    const cardData = lifeZones[player][zoneIndex];
+    if (cardData) {
+        // Ask where to put the card using notification
+        showNotification(
+            "Remove Card",
+            `Remove card from Life Zone ${zoneIndex + 1}. Click OK for hand, Cancel for board.`,
+            'warning',
+            0
+        );
+        
+        // Create a custom confirmation
+        setTimeout(() => {
+            const userChoice = confirm(`Remove card from Life Zone ${zoneIndex + 1}.\nOK = Put in hand\nCancel = Put on board`);
+            
+            if (userChoice) {
+                // Put in hand
+                hands[player].push({...cardData, flipped: false, rotated: false});
+                showNotification(
+                    "Card Moved to Hand",
+                    `Card moved from Life Zone ${zoneIndex + 1} to hand`,
+                    'success',
+                    2000
+                );
+            } else {
+                // Put on board (reset flipped state)
+                createBoardCard({...cardData, flipped: false, rotated: false}, player);
+                showNotification(
+                    "Card Moved to Board",
+                    `Card moved from Life Zone ${zoneIndex + 1} to board`,
+                    'success',
+                    2000
+                );
+            }
+            
+            // Clear the life zone
+            lifeZones[player][zoneIndex] = null;
+            updateLifeZoneDisplay(player, zoneIndex, null);
+            updateCounters();
+            closeZoomOnly();
+        }, 100);
+    }
+}
+
+function flipLifeZoneCard() {
+    if (!currentZoomSource || currentZoomSource.type !== 'lifezone') return;
+    
+    const player = currentZoomSource.player;
+    const zoneIndex = currentZoomSource.zoneIndex;
+    
+    const cardData = lifeZones[player][zoneIndex];
+    if (cardData) {
+        cardData.flipped = !cardData.flipped;
+        updateLifeZoneDisplay(player, zoneIndex, cardData);
+        closeZoomOnly();
+        
+        const status = cardData.flipped ? "flipped face-down" : "flipped face-up";
+        showNotification(
+            "Card Flipped",
+            `Life Zone ${zoneIndex + 1} card ${status}`,
+            'info',
+            2000
+        );
+    }
+}
+
+// --- SHOP FUNCTIONS ---
+function addToLifeZone(player) {
+    if (!currentShopImage) {
+        showNotification(
+            "No Card Selected",
+            "Please select a card first!",
+            'warning',
+            3000
+        );
+        return;
+    }
+    
+    // Find first empty life zone for this player
+    const emptyIndex = lifeZones[player].findIndex(card => card === null);
+    
+    if (emptyIndex === -1) {
+        showNotification(
+            "Life Zones Full",
+            `Player ${player} has no empty life zones!`,
+            'warning',
+            3000
+        );
+        return;
+    }
+    
+    // Create card data
+    const cardId = `life_${player}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    let categoryColor = "#7ED321"; // Default life color
+    for (const [categoryId, category] of Object.entries(CARD_CATEGORIES)) {
+        if (currentShopImage.includes(category.prefix)) {
+            categoryColor = category.color;
+            break;
+        }
+    }
+    
+    const cardData = {
+        image: currentShopImage,
+        id: cardId,
+        color: categoryColor,
+        flipped: false
+    };
+    
+    // Add to life zone
+    lifeZones[player][emptyIndex] = cardData;
+    updateLifeZoneDisplay(player, emptyIndex, cardData);
+    
+    showNotification(
+        "Card Added to Life Zone",
+        `Card added to Life Zone ${emptyIndex + 1} for Player ${player}`,
+        'success',
+        3000
+    );
+    currentShopImage = null;
+}
+
+// --- SHOP SETUP ---
+function setupShop() {
+    const container = document.getElementById("shopCards");
+    allShopCards = [];
+    
+    for (const [categoryId, category] of Object.entries(CARD_CATEGORIES)) {
+        for (let i = 1; i <= category.count; i++) {
+            const imgUrl = `${category.folder}${i}${category.prefix}${IMAGE_EXT}`;
+            
+            allShopCards.push({
+                image: imgUrl,
+                category: categoryId,
+                categoryName: category.name,
+                color: category.color
+            });
+        }
+    }
+    
+    filterShopCards('all');
+}
+
+function filterShopCards(category, event) {
+    currentShopCategory = category;
+    
+    document.querySelectorAll('.category-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    if (event && event.target) {
+        event.target.classList.add('active');
+    } else {
+        document.querySelector('.category-btn').classList.add('active');
+    }
+    
+    // Show/hide life category buttons
+    const lifeButtons = document.getElementById('lifeCategoryButtons');
+    if (category === 'life') {
+        lifeButtons.style.display = 'flex';
+    } else {
+        lifeButtons.style.display = 'none';
+    }
+    
+    const container = document.getElementById("shopCards");
+    container.innerHTML = "";
+    
+    const filteredCards = category === 'all' 
+        ? allShopCards 
+        : allShopCards.filter(card => card.category === category);
+    
+    filteredCards.forEach(cardData => {
+        const card = document.createElement("div");
+        card.className = "hand-display-card shop-card";
+        
+        const img = new Image();
+        img.onload = function() {
+            card.style.backgroundImage = `url('${cardData.image}')`;
+        };
+        img.onerror = function() {
+            card.style.backgroundColor = cardData.color;
+        };
+        img.src = cardData.image;
+        
+        card.style.borderColor = cardData.color;
+        card.style.borderWidth = "3px";
+        
+        const badge = document.createElement("div");
+        badge.style.position = "absolute";
+        badge.style.top = "5px";
+        badge.style.right = "5px";
+        badge.style.background = cardData.color;
+        badge.style.color = "white";
+        badge.style.padding = "2px 6px";
+        badge.style.borderRadius = "10px";
+        badge.style.fontSize = "10px";
+        badge.style.fontWeight = "bold";
+        badge.textContent = cardData.categoryName.charAt(0);
+        card.appendChild(badge);
+        
+        card.title = `${cardData.categoryName}\nClick to add to deck`;
+        
+        if (category === 'life') {
+            // For life category, store the image and show it
+            card.onclick = () => {
+                currentShopImage = cardData.image;
+                // Highlight selected card
+                document.querySelectorAll('.shop-card').forEach(c => {
+                    c.style.boxShadow = 'none';
+                });
+                card.style.boxShadow = '0 0 10px #7ED321';
+                showNotification(
+                    "Card Selected",
+                    `Selected ${cardData.categoryName} card. Now click "Add to P1 Life Zone" or "Add to P2 Life Zone"`,
+                    'info',
+                    3000
+                );
+            };
+        } else {
+            // For other categories, use quantity selector
+            card.onclick = () => openQuantitySelector(cardData.image, cardData.category);
+        }
+        
+        container.appendChild(card);
+    });
+}
+
+setupShop();
+
+// --- COUNTER TOKEN FUNCTIONS ---
+function addTokenToPlayer(player) {
+    const playerArea = document.getElementById(`player${player}Area`);
+    const tokenCount = counterTokens[player].length;
+    
+    // Maximum 4 tokens per player
+    if (tokenCount >= 4) {
+        showNotification(
+            "Token Limit Reached",
+            `Player ${player} already has 4 tokens!`,
+            'warning',
+            3000
+        );
+        return;
+    }
+    
+    const tokenId = `token_${player}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const tokenColor = TOKEN_COLORS[player][tokenCount];
+    const tokenLabel = TOKEN_LABELS[tokenCount] || `Token ${tokenCount + 1}`;
+    
+    // Create token element
+    const token = document.createElement("div");
+    token.className = `counter-token token-p${player}-${tokenCount + 1}`;
+    token.id = tokenId;
+    
+    // Calculate position - bottom right area near token controls
+    const rect = playerArea.getBoundingClientRect();
+    
+    // Position tokens in bottom right corner (2x2 grid)
+    const col = tokenCount % 2;
+    const row = Math.floor(tokenCount / 2);
+    
+    // Position in bottom right corner
+    const x = rect.width - 120 + (col * 60); // 120px from right, 60px spacing
+    const y = rect.height - 120 + (row * 60); // 120px from bottom
+    
+    token.style.left = `${x}px`;
+    token.style.top = `${y}px`;
+    
+    // Token content
+    token.innerHTML = `
+        <div class="counter-value">0</div>
+        <div class="counter-label">${tokenLabel}</div>
+        <div class="counter-controls">
+            <button class="counter-btn minus" onclick="changeTokenValue('${tokenId}', -1)">-</button>
+            <button class="counter-btn plus" onclick="changeTokenValue('${tokenId}', 1)">+</button>
+        </div>
+    `;
+    
+    // Add drag functionality
+    token.addEventListener('mousedown', startTokenDrag);
+    
+    playerArea.appendChild(token);
+    
+    // Store token data
+    counterTokens[player].push({
+        id: tokenId,
+        player: player,
+        value: 0,
+        label: tokenLabel,
+        color: tokenColor,
+        element: token,
+        position: { x, y }
+    });
+    
+    showNotification(
+        "Token Added",
+        `Added ${tokenLabel} token to Player ${player}`,
+        'success',
+        2000
+    );
+}
+
+function changeTokenValue(tokenId, amount) {
+    event.stopPropagation(); // Prevent triggering drag
+    
+    // Find token in all players
+    for (const player of [1, 2]) {
+        const tokenIndex = counterTokens[player].findIndex(token => token.id === tokenId);
+        if (tokenIndex > -1) {
+            const token = counterTokens[player][tokenIndex];
+            // CHANGED: Allow negative values (no Math.max(0, ...))
+            const newValue = token.value + amount;
+            
+            token.value = newValue;
+            const valueElement = token.element.querySelector('.counter-value');
+            if (valueElement) {
+                valueElement.textContent = newValue;
+                
+                // Add visual feedback
+                if (amount > 0) {
+                    valueElement.style.color = '#44ff44';
+                    setTimeout(() => {
+                        valueElement.style.color = token.color;
+                    }, 200);
+                } else if (amount < 0) {
+                    valueElement.style.color = '#ff4444';
+                    setTimeout(() => {
+                        valueElement.style.color = token.color;
+                    }, 200);
+                }
+            }
+            
+            // Show quick notification for significant changes
+            if (Math.abs(amount) >= 5) {
+                showNotification(
+                    "Token Updated",
+                    `${token.label}: ${amount > 0 ? '+' : ''}${amount}`,
+                    amount > 0 ? 'success' : 'warning',
+                    1500
+                );
+            }
+            break;
+        }
+    }
+}
+
+function resetPlayerTokens(player) {
+    // Remove all token elements
+    counterTokens[player].forEach(token => {
+        if (token.element && token.element.parentElement) {
+            token.element.remove();
+        }
+    });
+    
+    // Clear token array
+    counterTokens[player] = [];
+    
+    showNotification(
+        "Tokens Reset",
+        `Player ${player}'s tokens have been reset!`,
+        'info',
+        3000
+    );
+}
+
+// --- TOKEN DRAG AND DROP ---
+function startTokenDrag(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const token = e.target.closest('.counter-token');
+    if (!token) return;
+    
+    dragState.mouseDownTime = Date.now();
+    dragState.startX = e.clientX;
+    dragState.startY = e.clientY;
+    
+    dragState.originalCard = token;
+    dragState.originalParent = token.parentElement;
+    dragState.originalLeft = parseFloat(token.style.left) || 0;
+    dragState.originalTop = parseFloat(token.style.top) || 0;
+    dragState.draggingToken = true;
+    
+    document.addEventListener('mousemove', handleTokenMouseMove);
+    document.addEventListener('mouseup', handleTokenMouseUp);
+}
+
+function handleTokenMouseMove(e) {
+    if (!dragState.originalCard || !dragState.draggingToken) return;
+    
+    const currentTime = Date.now();
+    const timeDiff = currentTime - dragState.mouseDownTime;
+    const distanceX = Math.abs(e.clientX - dragState.startX);
+    const distanceY = Math.abs(e.clientY - dragState.startY);
+    
+    if (!dragState.isDragging && (timeDiff > 50 || distanceX > 5 || distanceY > 5)) {
+        dragState.isDragging = true;
+        
+        dragState.card = dragState.originalCard.cloneNode(true);
+        dragState.card.classList.add('dragging');
+        dragState.card.style.width = "50px"; // Smaller
+        dragState.card.style.height = "50px"; // Smaller
+        dragState.card.style.left = `${e.clientX - 25}px`; // Center on cursor (half of 50px)
+        dragState.card.style.top = `${e.clientY - 25}px`;
+        document.body.appendChild(dragState.card);
+        
+        dragState.originalCard.style.visibility = "hidden";
+    }
+    
+    if (dragState.isDragging && dragState.card) {
+        dragState.card.style.left = `${e.clientX - 25}px`;
+        dragState.card.style.top = `${e.clientY - 25}px`;
+    }
+}
+
+function handleTokenMouseUp(e) {
+    if (dragState.isDragging && dragState.draggingToken) {
+        const playerArea = dragState.originalParent;
+        const rect = playerArea.getBoundingClientRect();
+        
+        const relativeX = e.clientX - rect.left - 25; // Half of 50px
+        const relativeY = e.clientY - rect.top - 25; // Half of 50px
+        
+        // Ensure token stays within player area
+        const boundedX = Math.max(0, Math.min(relativeX, rect.width - 50));
+        const boundedY = Math.max(0, Math.min(relativeY, rect.height - 50));
+        
+        dragState.originalCard.style.left = `${boundedX}px`;
+        dragState.originalCard.style.top = `${boundedY}px`;
+        dragState.originalCard.style.visibility = "visible";
+        
+        if (dragState.card) {
+            dragState.card.remove();
+        }
+        
+        // Update token position in array
+        const tokenId = dragState.originalCard.id;
+        for (const player of [1, 2]) {
+            const tokenIndex = counterTokens[player].findIndex(token => token.id === tokenId);
+            if (tokenIndex > -1) {
+                counterTokens[player][tokenIndex].element = dragState.originalCard;
+                counterTokens[player][tokenIndex].position = { x: boundedX, y: boundedY };
+                break;
+            }
+        }
+    }
+    
+    // Clean up
+    if (dragState.card) {
+        dragState.card.remove();
+    }
+    
+    dragState.isDragging = false;
+    dragState.card = null;
+    dragState.originalCard = null;
+    dragState.draggingToken = false;
+    
+    document.removeEventListener('mousemove', handleTokenMouseMove);
+    document.removeEventListener('mouseup', handleTokenMouseUp);
+}
+
+// --- QUANTITY SELECTOR FUNCTIONS ---
+function openQuantitySelector(image, category) {
+    quantitySelectorState = {
+        image: image,
+        category: category,
+        quantity: 1
+    };
+    
+    document.getElementById('quantityCardPreview').style.backgroundImage = `url('${image}')`;
+    document.getElementById('quantityDisplay').textContent = '1';
+    document.getElementById('quantityOverlay').style.display = 'flex';
+}
+
+function changeQuantity(amount) {
+    const newQty = quantitySelectorState.quantity + amount;
+    if (newQty >= 1 && newQty <= 99) {
+        quantitySelectorState.quantity = newQty;
+        document.getElementById('quantityDisplay').textContent = newQty;
+    }
+}
+
+function closeQuantitySelector() {
+    document.getElementById('quantityOverlay').style.display = 'none';
+}
+
+function addMultipleToDeck(player) {
+    const { image, quantity } = quantitySelectorState;
+    
+    if (image && quantity > 0) {
+        let categoryColor = "#555";
+        for (const [categoryId, category] of Object.entries(CARD_CATEGORIES)) {
+            if (image.includes(category.prefix)) {
+                categoryColor = category.color;
+                break;
+            }
+        }
+        
+        for (let i = 0; i < quantity; i++) {
+            const cardId = `card_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${i}`;
+            decks[player].push({ 
+                image: image, 
+                id: cardId,
+                color: categoryColor
+            });
+        }
+        
+        updateCounters();
+        updateDeckVisual(player);
+        closeQuantitySelector();
+        
+        showNotification(
+            "Cards Added to Deck",
+            `${quantity} card(s) added to Player ${player}'s deck!`,
+            'success',
+            3000
+        );
+    }
+}
+
+document.getElementById('addToP1DeckQty').onclick = () => addMultipleToDeck(1);
+document.getElementById('addToP2DeckQty').onclick = () => addMultipleToDeck(2);
+
+// --- CORE MECHANICS ---
+function drawCard(player) {
+    // Legacy function, use drawCardWithAnimation instead
+    drawCardWithAnimation(player);
+}
+
+function shuffleDeck(player) {
+    // Legacy function, use shuffleDeckWithAnimation instead
+    shuffleDeckWithAnimation(player);
+}
+
+function updateCounters() {
+    document.getElementById("handCount1").textContent = hands[1].length;
+    document.getElementById("handCount2").textContent = hands[2].length;
+    document.getElementById("gyCount1").textContent = graveyards[1].length;
+    document.getElementById("gyCount2").textContent = graveyards[2].length;
+    
+    // Update deck visuals
+    updateDeckVisual(1);
+    updateDeckVisual(2);
+}
+
+// --- SHOP FUNCTIONS ---
+function openShop() {
+    document.getElementById("shopOverlay").style.display = "flex";
+    // Reset shop state
+    currentShopImage = null;
+    document.querySelectorAll('.shop-card').forEach(c => {
+        c.style.boxShadow = 'none';
+    });
+}
+
+function closeShop() {
+    document.getElementById("shopOverlay").style.display = "none";
+}
+
+// --- ZOOM FUNCTIONS ---
+function showCardZoom(image, source) {
+    currentZoomImage = image;
+    currentZoomSource = source;
+
+    document.getElementById("zoomCard").style.backgroundImage = `url('${image}')`;
+    
+    const isShop = (source.type === 'shop');
+    const isHand = (source.type === 'hand');
+    const isBoard = (source.type === 'board');
+    const isGraveyard = (source.type === 'graveyard');
+    const isDeck = (source.type === 'deck');
+    const isLifeZone = (source.type === 'lifezone');
+    
+    document.getElementById("addToDeckP1").style.display = isShop ? "inline-block" : "none";
+    document.getElementById("addToDeckP2").style.display = isShop ? "inline-block" : "none";
+    document.getElementById("playToBoard").style.display = isHand ? "inline-block" : "none";
+    document.getElementById("moveToHand").style.display = isBoard ? "inline-block" : "none";
+    document.getElementById("moveToDeck").style.display = isBoard ? "inline-block" : "none";
+    document.getElementById("moveToGY").style.display = (isHand || isBoard) ? "inline-block" : "none";
+    document.getElementById("putToBoardFromGY").style.display = isGraveyard ? "inline-block" : "none";
+    document.getElementById("putToBoardFromDeck").style.display = isDeck ? "inline-block" : "none";
+    
+    document.getElementById("rotateCardBtn").style.display = isBoard ? "inline-block" : "none";
+    document.getElementById("removeFromLifeZone").style.display = isLifeZone ? "inline-block" : "none";
+    document.getElementById("flipLifeZoneCard").style.display = isLifeZone ? "inline-block" : "none";
+    
+    // NEW: Show delete button only for board cards
+    document.getElementById("deleteCardBtn").style.display = isBoard ? "inline-block" : "none";
+    
+    document.getElementById("zoomOverlay").style.display = "flex";
+}
+
+function closeZoomOnly() { 
+    document.getElementById("zoomOverlay").style.display = "none"; 
+    currentZoomSource = null;
+    cardToDelete = null;
+}
+
+function closeZoom() { 
+    closeZoomOnly();
+}
+
+// --- CARD ROTATION FUNCTIONS ---
+function rotateCard() {
+    if (!currentZoomSource || currentZoomSource.type !== 'board') return;
+    
+    const cardId = currentZoomSource.cardId;
+    const cardElement = document.getElementById(cardId);
+    if (cardElement) {
+        rotateCardDirect(cardElement);
+        closeZoomOnly();
+    }
+}
+
+function rotateCardDirect(cardElement) {
+    if (!cardElement) return;
+    
+    cardElement.classList.toggle('rotated');
+    
+    const cardIndex = boardCards.findIndex(c => c.element === cardElement);
+    if (cardIndex > -1) {
+        boardCards[cardIndex].rotated = !boardCards[cardIndex].rotated;
+    }
+}
+
+// --- DELETE CARD FUNCTIONS ---
+function showDeleteConfirmation() {
+    if (!currentZoomSource || currentZoomSource.type !== 'board') return;
+    
+    const cardId = currentZoomSource.cardId;
+    const cardElement = document.getElementById(cardId);
+    
+    if (cardElement) {
+        cardToDelete = cardId;
+        document.getElementById('confirmDeleteOverlay').style.display = 'flex';
+    }
+}
+
+function showDeleteConfirmationForCard(cardId) {
+    const cardElement = document.getElementById(cardId);
+    if (cardElement) {
+        cardToDelete = cardId;
+        document.getElementById('confirmDeleteOverlay').style.display = 'flex';
+    }
+}
+
+function confirmDeleteCard() {
+    if (!cardToDelete) {
+        cancelDeleteCard();
+        return;
+    }
+    
+    // Find card in boardCards array
+    const cardIndex = boardCards.findIndex(card => card.id === cardToDelete);
+    
+    if (cardIndex > -1) {
+        const cardElement = document.getElementById(cardToDelete);
+        
+        if (cardElement) {
+            // Add delete animation
+            cardElement.classList.add('delete-animation');
+            
+            // Remove card after animation
+            setTimeout(() => {
+                cardElement.remove();
+                
+                // Remove from boardCards array
+                boardCards.splice(cardIndex, 1);
+                
+                // Close overlays
+                document.getElementById('confirmDeleteOverlay').style.display = 'none';
+                closeZoomOnly();
+                
+                showNotification(
+                    "Card Deleted",
+                    "Card has been permanently deleted!",
+                    'info',
+                    3000
+                );
+            }, 500);
+        }
+    }
+    
+    cardToDelete = null;
+}
+
+function cancelDeleteCard() {
+    cardToDelete = null;
+    document.getElementById('confirmDeleteOverlay').style.display = 'none';
+}
+
+// --- DECK MANAGEMENT ---
+function addToDeck(player) {
+    if (currentZoomImage) {
+        const cardId = `card_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        let categoryColor = "#555";
+        for (const [categoryId, category] of Object.entries(CARD_CATEGORIES)) {
+            if (currentZoomImage.includes(category.prefix)) {
+                categoryColor = category.color;
+                break;
+            }
+        }
+        
+        decks[player].push({ 
+            image: currentZoomImage, 
+            id: cardId,
+            color: categoryColor
+        });
+        updateCounters();
+        updateDeckVisual(player);
+        closeZoomOnly();
+        
+        showNotification(
+            "Card Added to Deck",
+            `Card added to Player ${player}'s deck!`,
+            'success',
+            3000
+        );
+    }
+}
+
+document.getElementById("addToDeckP1").onclick = () => addToDeck(1);
+document.getElementById("addToDeckP2").onclick = () => addToDeck(2);
+
+// --- CARD MOVEMENT FUNCTIONS ---
+function playToBoard() {
+    if (!currentZoomSource || currentZoomSource.type !== 'hand') return;
+    
+    const player = currentZoomSource.player;
+    const cardId = currentZoomSource.cardId;
+    
+    const cardIndex = hands[player].findIndex(card => card.id === cardId);
+    
+    if (cardIndex > -1) {
+        const cardData = hands[player][cardIndex];
+        hands[player].splice(cardIndex, 1);
+        createBoardCard(cardData, player);
+        updateCounters();
+        closeZoomOnly();
+        
+        showNotification(
+            "Card Played",
+            `Card played to Player ${player}'s board`,
+            'success',
+            2000
+        );
+    }
+}
+
+function putToBoardFromGY() {
+    if (!currentZoomSource || currentZoomSource.type !== 'graveyard') return;
+    
+    const player = currentZoomSource.player;
+    const cardIndex = currentZoomSource.cardIndex;
+    
+    if (cardIndex >= 0 && cardIndex < graveyards[player].length) {
+        const cardData = graveyards[player][cardIndex];
+        graveyards[player].splice(cardIndex, 1);
+        createBoardCard(cardData, player);
+        updateCounters();
+        closeZoomOnly();
+        
+        showNotification(
+            "Card Resurrected",
+            `Card moved from graveyard to Player ${player}'s board`,
+            'success',
+            2000
+        );
+    }
+}
+
+function putToBoardFromDeck() {
+    if (!currentZoomSource || currentZoomSource.type !== 'deck') return;
+    
+    const player = currentZoomSource.player;
+    const cardIndex = currentZoomSource.cardIndex;
+    
+    if (cardIndex >= 0 && cardIndex < decks[player].length) {
+        const cardData = decks[player][cardIndex];
+        decks[player].splice(cardIndex, 1);
+        createBoardCard(cardData, player);
+        updateCounters();
+        updateDeckVisual(player);
+        closeZoomOnly();
+        
+        showNotification(
+            "Card Played from Deck",
+            `Card played from deck to Player ${player}'s board`,
+            'success',
+            2000
+        );
+    }
+}
+
+document.getElementById("playToBoard").onclick = playToBoard;
+document.getElementById("putToBoardFromGY").onclick = putToBoardFromGY;
+document.getElementById("putToBoardFromDeck").onclick = putToBoardFromDeck;
+document.getElementById("moveToHand").onclick = moveToHand;
+document.getElementById("moveToDeck").onclick = moveToDeck;
+document.getElementById("moveToGY").onclick = moveToGY;
+
+function moveToHand() {
+    if (!currentZoomSource || currentZoomSource.type !== 'board') return;
+    
+    const player = currentZoomSource.player;
+    const cardId = currentZoomSource.cardId;
+    
+    const cardIndex = boardCards.findIndex(card => card.id === cardId);
+    
+    if (cardIndex > -1) {
+        const cardData = boardCards[cardIndex];
+        boardCards.splice(cardIndex, 1);
+        document.getElementById(cardId)?.remove();
+        hands[player].push(cardData);
+        updateCounters();
+        closeZoomOnly();
+        
+        showNotification(
+            "Card Returned to Hand",
+            `Card returned to Player ${player}'s hand`,
+            'info',
+            2000
+        );
+    }
+}
+
+function moveToDeck() {
+    if (!currentZoomSource || currentZoomSource.type !== 'board') return;
+    
+    const player = currentZoomSource.player;
+    const cardId = currentZoomSource.cardId;
+    
+    const cardIndex = boardCards.findIndex(card => card.id === cardId);
+    
+    if (cardIndex > -1) {
+        const cardData = boardCards[cardIndex];
+        boardCards.splice(cardIndex, 1);
+        document.getElementById(cardId)?.remove();
+        decks[player].push(cardData);
+        updateCounters();
+        updateDeckVisual(player);
+        closeZoomOnly();
+        
+        showNotification(
+            "Card Returned to Deck",
+            `Card returned to Player ${player}'s deck`,
+            'info',
+            2000
+        );
+    }
+}
+
+function moveToGY() {
+    if (!currentZoomSource) return;
+    
+    const player = currentZoomSource.player;
+    const cardId = currentZoomSource.cardId;
+    const sourceType = currentZoomSource.type;
+    
+    let cardData = null;
+    
+    if (sourceType === 'hand') {
+        const cardIndex = hands[player].findIndex(card => card.id === cardId);
+        if (cardIndex > -1) {
+            cardData = hands[player][cardIndex];
+            hands[player].splice(cardIndex, 1);
+        }
+    } else if (sourceType === 'board') {
+        const cardIndex = boardCards.findIndex(card => card.id === cardId);
+        if (cardIndex > -1) {
+            cardData = boardCards[cardIndex];
+            boardCards.splice(cardIndex, 1);
+            document.getElementById(cardId)?.remove();
+        }
+    }
+    
+    if (cardData) {
+        graveyards[player].push(cardData);
+        updateCounters();
+        closeZoomOnly();
+        
+        const sourceText = sourceType === 'hand' ? 'hand' : 'board';
+        showNotification(
+            "Card Sent to Graveyard",
+            `Card sent from ${sourceText} to Player ${player}'s graveyard`,
+            'info',
+            2000
+        );
+    }
+}
+
+// --- BOARD CARD FUNCTIONS with GY shortcut button ---
+function createBoardCard(cardData, player) {
+    const cardId = cardData.id || `board_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    const boardCard = document.createElement("div");
+    boardCard.className = "board-card";
+    boardCard.id = cardId;
+    
+    const img = new Image();
+    img.onload = function() {
+        boardCard.style.backgroundImage = `url('${cardData.image}')`;
+    };
+    img.onerror = function() {
+        boardCard.style.backgroundColor = cardData.color || "#555";
+    };
+    img.src = cardData.image;
+    
+    if (cardData.color) {
+        boardCard.style.borderColor = cardData.color;
+        boardCard.style.borderWidth = "3px";
+    }
+    
+    const playerArea = document.getElementById(`player${player}Area`);
+    const rect = playerArea.getBoundingClientRect();
+    
+    const x = 150 + Math.random() * 50;
+    const y = Math.random() * (rect.height - 180);
+    
+    boardCard.style.left = `${x}px`;
+    boardCard.style.top = `${y}px`;
+    
+    // Create card controls
+    const cardControls = document.createElement("div");
+    cardControls.className = "card-controls";
+    
+    // Rotate button
+    const rotateBtn = document.createElement("button");
+    rotateBtn.className = "card-control-btn rotate-btn";
+    rotateBtn.textContent = "Rotate";
+    rotateBtn.onclick = function(e) {
+        e.stopPropagation();
+        rotateCardDirect(boardCard);
+    };
+    
+    // Delete button
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "card-control-btn delete-btn";
+    deleteBtn.textContent = "Delete";
+    deleteBtn.onclick = function(e) {
+        e.stopPropagation();
+        showDeleteConfirmationForCard(cardId);
+    };
+    
+    cardControls.appendChild(rotateBtn);
+    cardControls.appendChild(deleteBtn);
+    boardCard.appendChild(cardControls);
+    
+    // ADD GY SHORTCUT BUTTON
+    const gyShortcutBtn = document.createElement("button");
+    gyShortcutBtn.className = "gy-shortcut-btn";
+    gyShortcutBtn.textContent = "GY";
+    gyShortcutBtn.title = "Send to Graveyard (Shortcut: G)";
+    gyShortcutBtn.onclick = function(e) {
+        e.stopPropagation();
+        sendToGraveyardShortcut(cardId);
+    };
+    boardCard.appendChild(gyShortcutBtn);
+    
+    boardCard.addEventListener('mousedown', startDrag);
+    
+    boardCard.addEventListener('click', (e) => {
+        if (!e.target.classList.contains('card-control-btn') && !e.target.classList.contains('gy-shortcut-btn')) {
+            e.stopPropagation();
+            showCardZoom(cardData.image, { 
+                type: 'board', 
+                player: player, 
+                cardId: cardId 
+            });
+        }
+    });
+    
+    playerArea.appendChild(boardCard);
+    
+    boardCards.push({
+        id: cardId,
+        image: cardData.image,
+        player: player,
+        element: boardCard,
+        color: cardData.color,
+        rotated: false
+    });
+}
+
+// --- DRAG AND DROP FOR CARDS ---
+function startDrag(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const card = e.target;
+    if (!card.classList.contains('board-card')) return;
+    
+    dragState.mouseDownTime = Date.now();
+    dragState.startX = e.clientX;
+    dragState.startY = e.clientY;
+    
+    dragState.originalCard = card;
+    dragState.originalParent = card.parentElement;
+    dragState.originalLeft = parseFloat(card.style.left) || 0;
+    dragState.originalTop = parseFloat(card.style.top) || 0;
+    dragState.draggingToken = false;
+    
+    dragState.ghostCard = card.cloneNode(true);
+    dragState.ghostCard.style.opacity = "0.3";
+    dragState.ghostCard.style.pointerEvents = "none";
+    dragState.ghostCard.style.zIndex = "5";
+    dragState.originalParent.appendChild(dragState.ghostCard);
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+}
+
+function handleMouseMove(e) {
+    if (!dragState.originalCard) return;
+    
+    const currentTime = Date.now();
+    const timeDiff = currentTime - dragState.mouseDownTime;
+    const distanceX = Math.abs(e.clientX - dragState.startX);
+    const distanceY = Math.abs(e.clientY - dragState.startY);
+    
+    if (!dragState.isDragging && (timeDiff > 50 || distanceX > 5 || distanceY > 5)) {
+        dragState.isDragging = true;
+        dragState.lastDraggedCard = dragState.originalCard;
+        
+        dragState.card = dragState.originalCard.cloneNode(true);
+        dragState.card.classList.add('dragging');
+        dragState.card.style.width = "120px";
+        dragState.card.style.height = "180px";
+        dragState.card.style.left = `${e.clientX - 60}px`;
+        dragState.card.style.top = `${e.clientY - 90}px`;
+        document.body.appendChild(dragState.card);
+        
+        dragState.originalCard.style.visibility = "hidden";
+    }
+    
+    if (dragState.isDragging && dragState.card) {
+        dragState.card.style.left = `${e.clientX - 60}px`;
+        dragState.card.style.top = `${e.clientY - 90}px`;
+    }
+}
+
+function handleMouseUp(e) {
+    if (dragState.isDragging && !dragState.draggingToken) {
+        const playerArea = dragState.originalParent;
+        const rect = playerArea.getBoundingClientRect();
+        
+        const relativeX = e.clientX - rect.left - 60;
+        const relativeY = e.clientY - rect.top - 90;
+        
+        const boundedX = Math.max(0, Math.min(relativeX, rect.width - 120));
+        const boundedY = Math.max(0, Math.min(relativeY, rect.height - 180));
+        
+        dragState.originalCard.style.left = `${boundedX}px`;
+        dragState.originalCard.style.top = `${boundedY}px`;
+        dragState.originalCard.style.visibility = "visible";
+        
+        if (dragState.card) {
+            dragState.card.remove();
+        }
+        
+        const cardIndex = boardCards.findIndex(c => c.id === dragState.originalCard.id);
+        if (cardIndex > -1) {
+            boardCards[cardIndex].element = dragState.originalCard;
+        }
+    } else if (dragState.originalCard && !dragState.draggingToken) {
+        const cardIndex = boardCards.findIndex(c => c.id === dragState.originalCard.id);
+        if (cardIndex > -1) {
+            const cardData = boardCards[cardIndex];
+            showCardZoom(cardData.image, { 
+                type: 'board', 
+                player: cardData.player, 
+                cardId: cardData.id 
+            });
+        }
+    }
+    
+    if (dragState.ghostCard) {
+        dragState.ghostCard.remove();
+    }
+    
+    dragState.isDragging = false;
+    dragState.card = null;
+    dragState.originalCard = null;
+    dragState.ghostCard = null;
+    dragState.lastDraggedCard = null;
+    dragState.draggingToken = false;
+    
+    document.removeEventListener('mousemove', handleMouseMove);
+    document.removeEventListener('mouseup', handleMouseUp);
+}
+
+function cancelDrag() {
+    if (dragState.isDragging && dragState.originalCard) {
+        dragState.originalCard.style.left = `${dragState.originalLeft}px`;
+        dragState.originalCard.style.top = `${dragState.originalTop}px`;
+        dragState.originalCard.style.visibility = "visible";
+        
+        if (dragState.card) {
+            dragState.card.remove();
+        }
+        
+        if (dragState.ghostCard) {
+            dragState.ghostCard.remove();
+        }
+        
+        dragState.isDragging = false;
+        dragState.card = null;
+        dragState.originalCard = null;
+        dragState.ghostCard = null;
+        dragState.lastDraggedCard = null;
+        dragState.draggingToken = false;
+        
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+    }
+}
+
+// --- HAND OVERLAY ---
+function viewHand(player) {
+    const overlay = document.getElementById("handOverlay");
+    const container = document.getElementById("handCardsContainer");
+    document.getElementById("handTitle").textContent = `Player ${player}'s Hand (${hands[player].length} Cards)`;
+    container.innerHTML = "";
+
+    hands[player].forEach(cardData => {
+        const card = document.createElement("div");
+        card.className = "hand-display-card";
+        
+        const img = new Image();
+        img.onload = function() {
+            card.style.backgroundImage = `url('${cardData.image}')`;
+        };
+        img.onerror = function() {
+            card.style.backgroundColor = cardData.color || "#555";
+        };
+        img.src = cardData.image;
+        
+        if (cardData.color) {
+            card.style.borderColor = cardData.color;
+            card.style.borderWidth = "3px";
+        }
+        
+        card.onclick = () => showCardZoom(cardData.image, { 
+            type: 'hand', 
+            player: player, 
+            cardId: cardData.id 
+        });
+        container.appendChild(card);
+    });
+
+    overlay.style.display = "flex";
+}
+
+function closeHand() { 
+    document.getElementById("handOverlay").style.display = "none"; 
+}
+
+function closeDeck() { 
+    document.getElementById("deckOverlay").style.display = "none"; 
+}
+
+// --- GRAVEYARD OVERLAY ---
+function viewGraveyard(player) {
+    const overlay = document.getElementById("graveyardOverlay");
+    const container = document.getElementById("graveyardCardsContainer");
+    document.getElementById("graveyardTitle").textContent = `Player ${player}'s Graveyard (${graveyards[player].length} Cards)`;
+    container.innerHTML = "";
+
+    graveyards[player].forEach((cardData, index) => {
+        const card = document.createElement("div");
+        card.className = "hand-display-card gy-card";
+        
+        const img = new Image();
+        img.onload = function() {
+            card.style.backgroundImage = `url('${cardData.image}')`;
+        };
+        img.onerror = function() {
+            card.style.backgroundColor = cardData.color || "#555";
+        };
+        img.src = cardData.image;
+        
+        if (cardData.color) {
+            card.style.borderColor = cardData.color;
+            card.style.borderWidth = "3px";
+        }
+        
+        card.onclick = () => {
+            showCardZoom(cardData.image, { 
+                type: 'graveyard', 
+                player: player, 
+                cardIndex: index 
+            });
+        };
+        
+        container.appendChild(card);
+    });
+
+    overlay.style.display = "flex";
+}
+
+function closeGraveyard() { 
+    document.getElementById("graveyardOverlay").style.display = "none"; 
+}
+
+// Initialize counters, deck visuals, and life zones
+updateCounters();
+initializeLifeZones();
+
+// Add CSS animation for shuffle success
+const style = document.createElement('style');
+style.textContent = `
+@keyframes shuffleSuccess {
+    0% { box-shadow: 0 0 0 0 rgba(0, 170, 170, 0.7); }
+    70% { box-shadow: 0 0 0 20px rgba(0, 170, 170, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(0, 170, 170, 0); }
+}
+`;
+document.head.appendChild(style);
+</script>
+</body>
+</html>
