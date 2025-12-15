@@ -1587,7 +1587,7 @@ function showNotification(title, message, type = 'info', duration = 3000) {
 }
 
 // ============================================================================
-// MULTIPLAYER STATE - REAL-TIME SYNC
+// MULTIPLAYER STATE
 // ============================================================================
 let multiplayer = {
     gameId: null,
@@ -1600,7 +1600,333 @@ let multiplayer = {
 };
 
 // ============================================================================
-// FIXED SYNC FUNCTIONS
+// GAME STATE
+// ============================================================================
+let decks = { 1: [], 2: [] };
+let hands = { 1: [], 2: [] };
+let graveyards = { 1: [], 2: [] };
+let boardCards = [];
+let counterTokens = { 1: [], 2: [] };
+let lifeZones = { 1: Array(5).fill(null), 2: Array(5).fill(null) };
+let currentZoomImage = "";
+let currentZoomSource = null;
+let cardToDelete = null;
+
+let dragState = {
+    isDragging: false,
+    card: null,
+    originalCard: null,
+    originalParent: null,
+    originalLeft: 0,
+    originalTop: 0,
+    ghostCard: null,
+    startX: 0,
+    startY: 0,
+    mouseDownTime: 0,
+    clickThreshold: 200,
+    lastDraggedCard: null,
+    draggingToken: false
+};
+
+let quantitySelectorState = {
+    image: "",
+    category: "",
+    quantity: 1
+};
+
+let currentShopCategory = 'all';
+let currentShopImage = null;
+
+const CARD_CATEGORIES = {
+    avatar: {
+        name: "Avatar",
+        folder: "Taling/Avatar/",
+        prefix: "avatar",
+        count: 484,
+        color: "#4A90E2"
+    },
+    magic: {
+        name: "Magic",
+        folder: "Taling/Magic/",
+        prefix: "magic",
+        count: 219,
+        color: "#9013FE"
+    },
+    construct: {
+        name: "Construct",
+        folder: "Taling/Construct/",
+        prefix: "con",
+        count: 18,
+        color: "#F5A623"
+    },
+    life: {
+        name: "Life",
+        folder: "Taling/Life/",
+        prefix: "life",
+        count: 48,
+        color: "#7ED321"
+    }
+};
+
+const TOKEN_COLORS = {
+    1: ['#ff6b6b', '#4ecdc4', '#ffe66d', '#95e1d3'],
+    2: ['#ff9a76', '#a8e6cf', '#ffd3b6', '#a8d8ea']
+};
+
+const TOKEN_LABELS = ['Health', 'Mana', 'Attack', 'Defense'];
+
+const IMAGE_EXT = ".png";
+let allShopCards = [];
+
+// ============================================================================
+// MULTIPLAYER FUNCTIONS
+// ============================================================================
+function showMultiplayerMenu() {
+    document.getElementById('multiplayerOverlay').style.display = 'flex';
+}
+
+function closeMultiplayerMenu() {
+    document.getElementById('multiplayerOverlay').style.display = 'none';
+}
+
+function createGame() {
+    if (!database) {
+        showNotification("Firebase Error", "Database not initialized", "error");
+        return;
+    }
+    
+    multiplayer.playerId = 'player_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    multiplayer.playerNumber = 1;
+    multiplayer.isHost = true;
+    
+    multiplayer.gameId = generateGameCode();
+    
+    document.getElementById('createGameSection').style.display = 'none';
+    document.getElementById('joinGameSection').style.display = 'none';
+    document.getElementById('gameInfoSection').style.display = 'block';
+    document.getElementById('displayGameCode').textContent = multiplayer.gameId;
+    
+    multiplayer.gameRef = database.ref('games/' + multiplayer.gameId);
+    multiplayer.boardStateRef = database.ref('boardStates/' + multiplayer.gameId);
+    
+    const initialGameState = getGameStateForSync();
+    
+    multiplayer.gameRef.set({
+        hostId: multiplayer.playerId,
+        players: {
+            [multiplayer.playerId]: {
+                playerNumber: 1,
+                name: "Player 1",
+                connected: true,
+                lastSeen: Date.now()
+            }
+        },
+        chat: [],
+        createdAt: Date.now(),
+        status: 'waiting'
+    }).then(() => {
+        multiplayer.boardStateRef.set(initialGameState);
+        
+        multiplayer.gameRef.on('value', handleGameUpdate);
+        multiplayer.boardStateRef.on('value', handleBoardStateUpdate);
+        
+        showNotification('Game Created!', `Share code: ${multiplayer.gameId}`, 'success');
+        
+        const multiplayerBtn = document.getElementById('multiplayerButton');
+        multiplayerBtn.textContent = '🌐 Room: ' + multiplayer.gameId;
+        multiplayerBtn.style.background = 'linear-gradient(145deg, #4CAF50, #388E3C)';
+    });
+}
+
+function joinGame() {
+    const code = document.getElementById('gameCodeInput').value.trim().toUpperCase();
+    if (!code || code.length !== 6) {
+        showNotification('Invalid Code', 'Please enter a 6-digit code', 'error');
+        return;
+    }
+    
+    if (!database) {
+        showNotification("Firebase Error", "Database not initialized", "error");
+        return;
+    }
+    
+    multiplayer.playerId = 'player_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    multiplayer.playerNumber = 2;
+    multiplayer.isHost = false;
+    multiplayer.gameId = code;
+    
+    multiplayer.gameRef = database.ref('games/' + code);
+    multiplayer.boardStateRef = database.ref('boardStates/' + code);
+    
+    multiplayer.gameRef.once('value').then((snapshot) => {
+        if (!snapshot.exists()) {
+            showNotification('Game Not Found', 'Check the code and try again', 'error');
+            return;
+        }
+        
+        const gameData = snapshot.val();
+        const players = gameData.players || {};
+        const playerCount = Object.keys(players).length;
+        
+        if (playerCount >= 2) {
+            showNotification('Game Full', 'This game already has 2 players', 'error');
+            return;
+        }
+        
+        return multiplayer.gameRef.update({
+            [`players/${multiplayer.playerId}`]: {
+                playerNumber: 2,
+                name: "Player 2",
+                connected: true,
+                lastSeen: Date.now()
+            },
+            lastUpdate: Date.now(),
+            status: 'playing'
+        });
+    }).then(() => {
+        document.getElementById('createGameSection').style.display = 'none';
+        document.getElementById('joinGameSection').style.display = 'none';
+        document.getElementById('gameInfoSection').style.display = 'block';
+        document.getElementById('displayGameCode').textContent = code;
+        
+        multiplayer.gameRef.on('value', handleGameUpdate);
+        multiplayer.boardStateRef.on('value', handleBoardStateUpdate);
+        
+        showNotification('Joined Game!', 'Connected to host', 'success');
+        
+        const multiplayerBtn = document.getElementById('multiplayerButton');
+        multiplayerBtn.textContent = '🌐 Room: ' + multiplayer.gameId;
+        multiplayerBtn.style.background = 'linear-gradient(145deg, #2196F3, #1976D2)';
+        
+        // Load initial game state
+        multiplayer.boardStateRef.once('value').then((snapshot) => {
+            if (snapshot.exists()) {
+                syncGameStateFromFirebase(snapshot.val());
+            }
+        });
+    });
+}
+
+function handleGameUpdate(snapshot) {
+    if (!snapshot.exists()) {
+        if (multiplayer.gameId) {
+            showNotification('Game Ended', 'Host left the game', 'warning');
+            leaveGame();
+        }
+        return;
+    }
+    
+    const gameData = snapshot.val();
+    
+    const playerList = document.getElementById('playerList');
+    if (playerList) {
+        playerList.innerHTML = '';
+        Object.entries(gameData.players || {}).forEach(([playerId, player]) => {
+            const badgeClass = player.playerNumber === 1 ? 'player1-badge' : 'player2-badge';
+            const youText = player.playerNumber === multiplayer.playerNumber ? ' (You)' : '';
+            playerList.innerHTML += `<div class="player-badge ${badgeClass}">Player ${player.playerNumber}${youText} ✅</div>`;
+        });
+    }
+    
+    if (gameData.chat) {
+        const chatContainer = document.getElementById('chatMessages');
+        if (chatContainer) {
+            chatContainer.innerHTML = '';
+            Object.values(gameData.chat).forEach(msg => {
+                const msgDiv = document.createElement('div');
+                msgDiv.innerHTML = `<strong>Player ${msg.sender}:</strong> ${msg.text}`;
+                msgDiv.style.margin = '5px 0';
+                msgDiv.style.padding = '8px';
+                msgDiv.style.background = msg.sender === multiplayer.playerNumber ? 'rgba(33, 150, 243, 0.2)' : 'rgba(255, 255, 255, 0.1)';
+                msgDiv.style.borderRadius = '10px';
+                chatContainer.appendChild(msgDiv);
+            });
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    }
+}
+
+function handleBoardStateUpdate(snapshot) {
+    if (!snapshot.exists() || !multiplayer.gameId || multiplayer.isSyncing) return;
+    
+    const boardState = snapshot.val();
+    
+    if (boardState.lastUpdatePlayer === multiplayer.playerNumber) {
+        return;
+    }
+    
+    syncGameStateFromFirebase(boardState);
+}
+
+function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const message = input.value.trim();
+    
+    if (!message || !multiplayer.gameRef) return;
+    
+    const chatMessage = {
+        sender: multiplayer.playerNumber,
+        text: message,
+        timestamp: Date.now()
+    };
+    
+    multiplayer.gameRef.child('chat').push(chatMessage);
+    input.value = '';
+}
+
+function copyGameCode() {
+    if (!multiplayer.gameId) return;
+    navigator.clipboard.writeText(multiplayer.gameId);
+    showNotification('Copied!', 'Game code copied', 'success');
+}
+
+function copyGameLink() {
+    if (!multiplayer.gameId) return;
+    const link = window.location.href.split('?')[0] + '?game=' + multiplayer.gameId;
+    navigator.clipboard.writeText(link);
+    showNotification('Copied!', 'Invite link copied', 'success');
+}
+
+function leaveGame() {
+    if (multiplayer.gameRef) {
+        multiplayer.gameRef.child('players/' + multiplayer.playerId).remove();
+        multiplayer.gameRef.off();
+        multiplayer.boardStateRef.off();
+    }
+    
+    multiplayer = {
+        gameId: null,
+        playerId: null,
+        playerNumber: null,
+        isHost: false,
+        gameRef: null,
+        boardStateRef: null,
+        lastSyncTime: 0,
+        isSyncing: false
+    };
+    
+    document.getElementById('createGameSection').style.display = 'block';
+    document.getElementById('joinGameSection').style.display = 'block';
+    document.getElementById('gameInfoSection').style.display = 'none';
+    
+    const multiplayerBtn = document.getElementById('multiplayerButton');
+    multiplayerBtn.textContent = '🌐 Online Play';
+    multiplayerBtn.style.background = 'linear-gradient(145deg, #2196F3, #1976D2)';
+    
+    showNotification('Left Game', 'You have left the game', 'info');
+}
+
+function generateGameCode() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < 6; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+}
+
+// ============================================================================
+// SYNC FUNCTIONS
 // ============================================================================
 function getGameStateForSync() {
     const boardCardsData = boardCards.map(card => ({
@@ -1669,7 +1995,7 @@ function syncGameStateFromFirebase(firebaseState) {
     try {
         const ourPlayer = multiplayer.playerNumber;
         
-        // CLEAR ALL OPPONENT'S VISUAL ELEMENTS FIRST
+        // Clear opponent's visual elements
         document.querySelectorAll('.board-card').forEach(el => {
             const cardId = el.id;
             const card = boardCards.find(c => c.id === cardId);
@@ -1689,12 +2015,12 @@ function syncGameStateFromFirebase(firebaseState) {
             }
         });
         
-        // CLEAR LOCAL STATE OF OPPONENT'S CARDS/TOKENS
+        // Clear local state
         boardCards = boardCards.filter(card => card.player === ourPlayer);
         counterTokens[1] = counterTokens[1].filter(token => token.player === ourPlayer);
         counterTokens[2] = counterTokens[2].filter(token => token.player === ourPlayer);
         
-        // UPDATE LOCAL STATE FROM FIREBASE
+        // Update from Firebase
         if (firebaseState.decks) {
             decks = JSON.parse(JSON.stringify(firebaseState.decks));
         }
@@ -1707,13 +2033,12 @@ function syncGameStateFromFirebase(firebaseState) {
             graveyards = JSON.parse(JSON.stringify(firebaseState.graveyards));
         }
         
-        // RENDER ALL BOARD CARDS FROM FIREBASE
+        // Render all board cards
         if (firebaseState.boardCards) {
             firebaseState.boardCards.forEach(cardData => {
                 const cardId = cardData.id;
                 const player = cardData.player;
                 
-                // Skip if card already exists
                 if (document.getElementById(cardId)) return;
                 
                 const playerArea = document.getElementById(`player${player}Area`);
@@ -1735,7 +2060,6 @@ function syncGameStateFromFirebase(firebaseState) {
                     cardElement.classList.add('rotated');
                 }
                 
-                // Set interaction based on whether it's our card
                 if (player === ourPlayer) {
                     cardElement.addEventListener('mousedown', startDrag);
                     cardElement.addEventListener('click', (e) => {
@@ -1748,7 +2072,6 @@ function syncGameStateFromFirebase(firebaseState) {
                     });
                     cardElement.style.cursor = 'move';
                     
-                    // Add controls for our own cards
                     const controls = document.createElement('div');
                     controls.className = 'card-controls';
                     controls.innerHTML = `
@@ -1783,7 +2106,7 @@ function syncGameStateFromFirebase(firebaseState) {
             });
         }
         
-        // RENDER ALL TOKENS FROM FIREBASE
+        // Render all tokens
         if (firebaseState.counterTokens) {
             Object.keys(firebaseState.counterTokens).forEach(player => {
                 const playerNum = parseInt(player);
@@ -1791,7 +2114,6 @@ function syncGameStateFromFirebase(firebaseState) {
                 firebaseState.counterTokens[player].forEach(tokenData => {
                     const tokenId = tokenData.id;
                     
-                    // Skip if token already exists
                     if (document.getElementById(tokenId)) return;
                     
                     const playerArea = document.getElementById(`player${playerNum}Area`);
@@ -1857,7 +2179,6 @@ function syncGameStateFromFirebase(firebaseState) {
             }
         }
         
-        // UPDATE ALL COUNTERS
         updateCounters();
         updateDeckVisual(1);
         updateDeckVisual(2);
@@ -1870,93 +2191,107 @@ function syncGameStateFromFirebase(firebaseState) {
 }
 
 // ============================================================================
-// FIXED INITIAL SYNC WHEN PLAYER 2 JOINS
+// CORE GAME FUNCTIONS
 // ============================================================================
-function joinGame() {
-    const code = document.getElementById('gameCodeInput').value.trim().toUpperCase();
-    if (!code || code.length !== 6) {
-        showNotification('Invalid Code', 'Please enter a 6-digit code', 'error');
-        return;
-    }
+function updateDeckVisual(player) {
+    const deckZone = document.getElementById(`deck${player}`);
+    const deckCount = decks[player].length;
+    const deckStack = deckZone.querySelector('.deck-card-stack');
     
-    if (!database) {
-        showNotification("Firebase Error", "Database not initialized", "error");
-        return;
-    }
+    document.getElementById(`deckCount${player}`).textContent = deckCount;
     
-    multiplayer.playerId = 'player_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    multiplayer.playerNumber = 2;
-    multiplayer.isHost = false;
-    multiplayer.gameId = code;
-    
-    multiplayer.gameRef = database.ref('games/' + code);
-    multiplayer.boardStateRef = database.ref('boardStates/' + code);
-    
-    multiplayer.gameRef.once('value').then((snapshot) => {
-        if (!snapshot.exists()) {
-            showNotification('Game Not Found', 'Check the code and try again', 'error');
-            return;
+    if (deckCount === 0) {
+        deckZone.classList.add('empty');
+        document.getElementById(`shuffleBtn${player}`).disabled = true;
+        document.getElementById(`openBtn${player}`).disabled = true;
+    } else {
+        deckZone.classList.remove('empty');
+        document.getElementById(`shuffleBtn${player}`).disabled = false;
+        document.getElementById(`openBtn${player}`).disabled = false;
+        
+        deckStack.innerHTML = '';
+        const layers = Math.min(5, deckCount);
+        for (let i = 0; i < layers; i++) {
+            const layer = document.createElement('div');
+            layer.className = 'deck-card-layer';
+            deckStack.appendChild(layer);
         }
-        
-        const gameData = snapshot.val();
-        const players = gameData.players || {};
-        const playerCount = Object.keys(players).length;
-        
-        if (playerCount >= 2) {
-            showNotification('Game Full', 'This game already has 2 players', 'error');
-            return;
-        }
-        
-        return multiplayer.gameRef.update({
-            [`players/${multiplayer.playerId}`]: {
-                playerNumber: 2,
-                name: "Player 2",
-                connected: true,
-                lastSeen: Date.now()
-            },
-            lastUpdate: Date.now(),
-            status: 'playing'
-        });
-    }).then(() => {
-        document.getElementById('createGameSection').style.display = 'none';
-        document.getElementById('joinGameSection').style.display = 'none';
-        document.getElementById('gameInfoSection').style.display = 'block';
-        document.getElementById('displayGameCode').textContent = code;
-        
-        multiplayer.gameRef.on('value', handleGameUpdate);
-        multiplayer.boardStateRef.on('value', handleBoardStateUpdate);
-        
-        showNotification('Joined Game!', 'Connected to host', 'success');
-        
-        const multiplayerBtn = document.getElementById('multiplayerButton');
-        multiplayerBtn.textContent = '🌐 Room: ' + multiplayer.gameId;
-        multiplayerBtn.style.background = 'linear-gradient(145deg, #2196F3, #1976D2)';
-        
-        // LOAD INITIAL GAME STATE
-        multiplayer.boardStateRef.once('value').then((snapshot) => {
-            if (snapshot.exists()) {
-                // Clear local state first
-                decks = { 1: [], 2: [] };
-                hands = { 1: [], 2: [] };
-                graveyards = { 1: [], 2: [] };
-                boardCards = [];
-                counterTokens = { 1: [], 2: [] };
-                lifeZones = { 1: Array(5).fill(null), 2: Array(5).fill(null) };
-                
-                // Clear all visual elements
-                document.querySelectorAll('.board-card').forEach(el => el.remove());
-                document.querySelectorAll('.counter-token').forEach(el => el.remove());
-                
-                // Load from Firebase
-                syncGameStateFromFirebase(snapshot.val());
-            }
-        });
-    });
+    }
 }
 
-// ============================================================================
-// FIXED CARD CREATION FUNCTION
-// ============================================================================
+function drawCardWithAnimation(player) {
+    if (multiplayer.gameId && player !== multiplayer.playerNumber) {
+        showNotification("Not Allowed", "You can only draw from your own deck", 'error');
+        return;
+    }
+    
+    if (decks[player].length === 0) {
+        showNotification("Deck Empty", "Open Shop to add cards to your deck!", 'warning');
+        return;
+    }
+    
+    const cardData = decks[player].shift();
+    hands[player].push(cardData);
+    updateCounters();
+    updateDeckVisual(player);
+    
+    showNotification("Card Drawn", `Player ${player} drew 1 card`, 'success');
+    
+    if (multiplayer.gameId) {
+        setTimeout(() => {
+            syncGameStateToFirebase();
+        }, 100);
+    }
+}
+
+function shuffleDeckWithAnimation(player) {
+    if (multiplayer.gameId && player !== multiplayer.playerNumber) {
+        showNotification("Not Allowed", "You can only shuffle your own deck", 'error');
+        return;
+    }
+    
+    if (decks[player].length === 0) {
+        showNotification("Deck Empty", "No cards to shuffle!", 'warning');
+        return;
+    }
+    
+    decks[player].sort(() => Math.random() - 0.5);
+    updateDeckVisual(player);
+    
+    showNotification("Deck Shuffled", `Player ${player}'s deck shuffled`, 'success');
+    
+    if (multiplayer.gameId) {
+        setTimeout(() => {
+            syncGameStateToFirebase();
+        }, 100);
+    }
+}
+
+function openFromDeck(player) {
+    if (multiplayer.gameId && player !== multiplayer.playerNumber) {
+        showNotification("Not Allowed", "You can only open from your own deck", 'error');
+        return;
+    }
+    
+    if (decks[player].length === 0) {
+        showNotification("Deck Empty", "No cards in deck!", 'warning');
+        return;
+    }
+    
+    const cardData = decks[player].shift();
+    createBoardCard(cardData, player);
+    updateCounters();
+    updateDeckVisual(player);
+    
+    showNotification("Card Opened", `Player ${player} opened a card`, 'success');
+    
+    if (multiplayer.gameId) {
+        setTimeout(() => {
+            syncGameStateToFirebase();
+        }, 100);
+    }
+}
+
 function createBoardCard(cardData, player) {
     const cardId = cardData.id || `board_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
@@ -1979,7 +2314,6 @@ function createBoardCard(cardData, player) {
     boardCard.style.left = `${x}px`;
     boardCard.style.top = `${y}px`;
     
-    // Set interaction based on whether it's our card
     if (!multiplayer.gameId || player === multiplayer.playerNumber) {
         boardCard.addEventListener('mousedown', startDrag);
         boardCard.addEventListener('click', (e) => {
@@ -1992,7 +2326,6 @@ function createBoardCard(cardData, player) {
         });
         boardCard.style.cursor = 'move';
         
-        // Add controls for our own cards
         const controls = document.createElement('div');
         controls.className = 'card-controls';
         controls.innerHTML = `
@@ -2025,7 +2358,6 @@ function createBoardCard(cardData, player) {
         rotated: false
     });
     
-    // Auto-sync to Firebase if in multiplayer
     if (multiplayer.gameId) {
         setTimeout(() => {
             syncGameStateToFirebase();
@@ -2033,11 +2365,455 @@ function createBoardCard(cardData, player) {
     }
 }
 
+function showCardZoom(image, source) {
+    currentZoomImage = image;
+    currentZoomSource = source;
+
+    document.getElementById("zoomCard").style.backgroundImage = `url('${image}')`;
+    
+    const isShop = (source.type === 'shop');
+    const isHand = (source.type === 'hand');
+    const isBoard = (source.type === 'board');
+    const isGraveyard = (source.type === 'graveyard');
+    const isDeck = (source.type === 'deck');
+    const isLifeZone = (source.type === 'lifezone');
+    const isOpponent = source.isOpponent;
+    const isOurCard = multiplayer.gameId ? (source.player === multiplayer.playerNumber) : true;
+    
+    document.getElementById("addToDeckP1").style.display = isShop ? "inline-block" : "none";
+    document.getElementById("addToDeckP2").style.display = isShop ? "inline-block" : "none";
+    document.getElementById("playToBoard").style.display = (isHand && !isOpponent && isOurCard) ? "inline-block" : "none";
+    document.getElementById("moveToHand").style.display = (isBoard && !isOpponent && isOurCard) ? "inline-block" : "none";
+    document.getElementById("moveToDeck").style.display = (isBoard && !isOpponent && isOurCard) ? "inline-block" : "none";
+    document.getElementById("moveToGY").style.display = ((isHand || isBoard) && !isOpponent && isOurCard) ? "inline-block" : "none";
+    document.getElementById("putToBoardFromGY").style.display = (isGraveyard && !isOpponent && isOurCard) ? "inline-block" : "none";
+    document.getElementById("putToBoardFromDeck").style.display = (isDeck && !isOpponent && isOurCard) ? "inline-block" : "none";
+    
+    document.getElementById("rotateCardBtn").style.display = (isBoard && !isOpponent && isOurCard) ? "inline-block" : "none";
+    document.getElementById("removeFromLifeZone").style.display = (isLifeZone && !isOpponent && isOurCard) ? "inline-block" : "none";
+    document.getElementById("flipLifeZoneCard").style.display = (isLifeZone && !isOpponent && isOurCard) ? "inline-block" : "none";
+    document.getElementById("deleteCardBtn").style.display = (isBoard && !isOpponent && isOurCard) ? "inline-block" : "none";
+    
+    document.getElementById("zoomOverlay").style.display = "flex";
+}
+
+function closeZoomOnly() { 
+    document.getElementById("zoomOverlay").style.display = "none"; 
+    currentZoomSource = null;
+    cardToDelete = null;
+}
+
+function playToBoard() {
+    if (!currentZoomSource || currentZoomSource.type !== 'hand') return;
+    
+    const player = currentZoomSource.player;
+    const cardId = currentZoomSource.cardId;
+    
+    if (multiplayer.gameId && player !== multiplayer.playerNumber) {
+        showNotification("Not Allowed", "You can only play cards from your own hand", 'error');
+        return;
+    }
+    
+    const cardIndex = hands[player].findIndex(card => card.id === cardId);
+    if (cardIndex > -1) {
+        const cardData = hands[player][cardIndex];
+        hands[player].splice(cardIndex, 1);
+        createBoardCard(cardData, player);
+        updateCounters();
+        closeZoomOnly();
+        showNotification("Card Played", `Card played to board`, 'success');
+        
+        if (multiplayer.gameId) {
+            setTimeout(() => {
+                syncGameStateToFirebase();
+            }, 100);
+        }
+    }
+}
+
+function moveToHand() {
+    if (!currentZoomSource || currentZoomSource.type !== 'board') return;
+    
+    const player = currentZoomSource.player;
+    const cardId = currentZoomSource.cardId;
+    
+    if (multiplayer.gameId && player !== multiplayer.playerNumber) {
+        showNotification("Not Allowed", "You can only move your own cards", 'error');
+        return;
+    }
+    
+    const cardIndex = boardCards.findIndex(card => card.id === cardId);
+    if (cardIndex > -1) {
+        const cardData = boardCards[cardIndex];
+        boardCards.splice(cardIndex, 1);
+        document.getElementById(cardId)?.remove();
+        hands[player].push(cardData);
+        updateCounters();
+        closeZoomOnly();
+        showNotification("Card Returned", `Card returned to hand`, 'info');
+        
+        if (multiplayer.gameId) {
+            setTimeout(() => {
+                syncGameStateToFirebase();
+            }, 100);
+        }
+    }
+}
+
+function moveToGY() {
+    if (!currentZoomSource) return;
+    
+    const player = currentZoomSource.player;
+    const cardId = currentZoomSource.cardId;
+    const sourceType = currentZoomSource.type;
+    
+    if (multiplayer.gameId && player !== multiplayer.playerNumber) {
+        showNotification("Not Allowed", "You can only move your own cards", 'error');
+        return;
+    }
+    
+    let cardData = null;
+    
+    if (sourceType === 'hand') {
+        const cardIndex = hands[player].findIndex(card => card.id === cardId);
+        if (cardIndex > -1) {
+            cardData = hands[player][cardIndex];
+            hands[player].splice(cardIndex, 1);
+        }
+    } else if (sourceType === 'board') {
+        const cardIndex = boardCards.findIndex(card => card.id === cardId);
+        if (cardIndex > -1) {
+            cardData = boardCards[cardIndex];
+            boardCards.splice(cardIndex, 1);
+            document.getElementById(cardId)?.remove();
+        }
+    }
+    
+    if (cardData) {
+        graveyards[player].push(cardData);
+        updateCounters();
+        closeZoomOnly();
+        showNotification("Card Sent", `Card sent to graveyard`, 'info');
+        
+        if (multiplayer.gameId) {
+            setTimeout(() => {
+                syncGameStateToFirebase();
+            }, 100);
+        }
+    }
+}
+
+function addToDeck(player) {
+    if (currentZoomImage) {
+        const cardId = `card_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        let categoryColor = "#555";
+        for (const [categoryId, category] of Object.entries(CARD_CATEGORIES)) {
+            if (currentZoomImage.includes(category.prefix)) {
+                categoryColor = category.color;
+                break;
+            }
+        }
+        
+        decks[player].push({ 
+            image: currentZoomImage, 
+            id: cardId,
+            color: categoryColor
+        });
+        updateCounters();
+        updateDeckVisual(player);
+        closeZoomOnly();
+        showNotification("Card Added", `Card added to deck`, 'success');
+        
+        if (multiplayer.gameId) {
+            setTimeout(() => {
+                syncGameStateToFirebase();
+            }, 100);
+        }
+    }
+}
+
+function updateCounters() {
+    document.getElementById("handCount1").textContent = hands[1].length;
+    document.getElementById("handCount2").textContent = hands[2].length;
+    document.getElementById("gyCount1").textContent = graveyards[1].length;
+    document.getElementById("gyCount2").textContent = graveyards[2].length;
+    updateDeckVisual(1);
+    updateDeckVisual(2);
+}
+
 // ============================================================================
-// FIXED TOKEN FUNCTIONS
+// SHOP FUNCTIONS
+// ============================================================================
+function setupShop() {
+    const container = document.getElementById("shopCards");
+    allShopCards = [];
+    
+    for (const [categoryId, category] of Object.entries(CARD_CATEGORIES)) {
+        for (let i = 1; i <= category.count; i++) {
+            const imgUrl = `${category.folder}${i}${category.prefix}${IMAGE_EXT}`;
+            
+            allShopCards.push({
+                image: imgUrl,
+                category: categoryId,
+                categoryName: category.name,
+                color: category.color
+            });
+        }
+    }
+    
+    filterShopCards('all');
+}
+
+function filterShopCards(category, event) {
+    currentShopCategory = category;
+    
+    document.querySelectorAll('.category-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    if (event && event.target) {
+        event.target.classList.add('active');
+    } else {
+        document.querySelector('.category-btn').classList.add('active');
+    }
+    
+    const lifeButtons = document.getElementById('lifeCategoryButtons');
+    if (category === 'life') {
+        lifeButtons.style.display = 'flex';
+    } else {
+        lifeButtons.style.display = 'none';
+    }
+    
+    const container = document.getElementById("shopCards");
+    container.innerHTML = "";
+    
+    const filteredCards = category === 'all' 
+        ? allShopCards 
+        : allShopCards.filter(card => card.category === category);
+    
+    filteredCards.forEach(cardData => {
+        const card = document.createElement("div");
+        card.className = "hand-display-card shop-card";
+        
+        const img = new Image();
+        img.onload = function() {
+            card.style.backgroundImage = `url('${cardData.image}')`;
+        };
+        img.onerror = function() {
+            card.style.backgroundColor = cardData.color;
+        };
+        img.src = cardData.image;
+        
+        card.style.borderColor = cardData.color;
+        card.style.borderWidth = "3px";
+        
+        const badge = document.createElement("div");
+        badge.style.position = "absolute";
+        badge.style.top = "5px";
+        badge.style.right = "5px";
+        badge.style.background = cardData.color;
+        badge.style.color = "white";
+        badge.style.padding = "2px 6px";
+        badge.style.borderRadius = "10px";
+        badge.style.fontSize = "10px";
+        badge.style.fontWeight = "bold";
+        badge.textContent = cardData.categoryName.charAt(0);
+        card.appendChild(badge);
+        
+        card.title = `${cardData.categoryName}\nClick to add to deck`;
+        
+        if (category === 'life') {
+            card.onclick = () => {
+                currentShopImage = cardData.image;
+                document.querySelectorAll('.shop-card').forEach(c => {
+                    c.style.boxShadow = 'none';
+                });
+                card.style.boxShadow = '0 0 10px #7ED321';
+                showNotification("Card Selected", `Selected ${cardData.categoryName} card. Now click "Add to P1 Life Zone" or "Add to P2 Life Zone"`, 'info', 3000);
+            };
+        } else {
+            card.onclick = () => openQuantitySelector(cardData.image, cardData.category);
+        }
+        
+        container.appendChild(card);
+    });
+}
+
+function openShop() {
+    document.getElementById("shopOverlay").style.display = "flex";
+    currentShopImage = null;
+    document.querySelectorAll('.shop-card').forEach(c => {
+        c.style.boxShadow = 'none';
+    });
+}
+
+function closeShop() {
+    document.getElementById("shopOverlay").style.display = "none";
+}
+
+function openQuantitySelector(image, category) {
+    quantitySelectorState = {
+        image: image,
+        category: category,
+        quantity: 1
+    };
+    
+    document.getElementById('quantityCardPreview').style.backgroundImage = `url('${image}')`;
+    document.getElementById('quantityDisplay').textContent = '1';
+    document.getElementById('quantityOverlay').style.display = 'flex';
+}
+
+function changeQuantity(amount) {
+    const newQty = quantitySelectorState.quantity + amount;
+    if (newQty >= 1 && newQty <= 99) {
+        quantitySelectorState.quantity = newQty;
+        document.getElementById('quantityDisplay').textContent = newQty;
+    }
+}
+
+function closeQuantitySelector() {
+    document.getElementById('quantityOverlay').style.display = 'none';
+}
+
+function addMultipleToDeck(player) {
+    const { image, quantity } = quantitySelectorState;
+    
+    if (image && quantity > 0) {
+        let categoryColor = "#555";
+        for (const [categoryId, category] of Object.entries(CARD_CATEGORIES)) {
+            if (image.includes(category.prefix)) {
+                categoryColor = category.color;
+                break;
+            }
+        }
+        
+        for (let i = 0; i < quantity; i++) {
+            const cardId = `card_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${i}`;
+            decks[player].push({ 
+                image: image, 
+                id: cardId,
+                color: categoryColor
+            });
+        }
+        
+        updateCounters();
+        updateDeckVisual(player);
+        closeQuantitySelector();
+        
+        showNotification("Cards Added to Deck", `${quantity} card(s) added to Player ${player}'s deck!`, 'success', 3000);
+        
+        if (multiplayer.gameId) {
+            setTimeout(() => {
+                syncGameStateToFirebase();
+            }, 100);
+        }
+    }
+}
+
+// ============================================================================
+// DRAG AND DROP
+// ============================================================================
+function startDrag(e) {
+    const card = e.target.closest('.board-card');
+    if (!card) return;
+    
+    const cardId = card.id;
+    const cardData = boardCards.find(c => c.id === cardId);
+    if (!cardData) return;
+    
+    if (multiplayer.gameId && cardData.player !== multiplayer.playerNumber) {
+        return;
+    }
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    dragState.mouseDownTime = Date.now();
+    dragState.startX = e.clientX;
+    dragState.startY = e.clientY;
+    
+    dragState.originalCard = card;
+    dragState.originalParent = card.parentElement;
+    dragState.originalLeft = parseFloat(card.style.left) || 0;
+    dragState.originalTop = parseFloat(card.style.top) || 0;
+    dragState.draggingToken = false;
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+}
+
+function handleMouseMove(e) {
+    if (!dragState.originalCard) return;
+    
+    const currentTime = Date.now();
+    const timeDiff = currentTime - dragState.mouseDownTime;
+    const distanceX = Math.abs(e.clientX - dragState.startX);
+    const distanceY = Math.abs(e.clientY - dragState.startY);
+    
+    if (!dragState.isDragging && (timeDiff > 50 || distanceX > 5 || distanceY > 5)) {
+        dragState.isDragging = true;
+        
+        dragState.card = dragState.originalCard.cloneNode(true);
+        dragState.card.classList.add('dragging');
+        dragState.card.style.left = `${e.clientX - 60}px`;
+        dragState.card.style.top = `${e.clientY - 90}px`;
+        document.body.appendChild(dragState.card);
+        
+        dragState.originalCard.style.visibility = "hidden";
+    }
+    
+    if (dragState.isDragging && dragState.card) {
+        dragState.card.style.left = `${e.clientX - 60}px`;
+        dragState.card.style.top = `${e.clientY - 90}px`;
+    }
+}
+
+function handleMouseUp(e) {
+    if (dragState.isDragging && !dragState.draggingToken) {
+        const playerArea = dragState.originalParent;
+        const rect = playerArea.getBoundingClientRect();
+        
+        const relativeX = e.clientX - rect.left - 60;
+        const relativeY = e.clientY - rect.top - 90;
+        
+        const boundedX = Math.max(0, Math.min(relativeX, rect.width - 120));
+        const boundedY = Math.max(0, Math.min(relativeY, rect.height - 180));
+        
+        dragState.originalCard.style.left = `${boundedX}px`;
+        dragState.originalCard.style.top = `${boundedY}px`;
+        dragState.originalCard.style.visibility = "visible";
+        
+        if (dragState.card) {
+            dragState.card.remove();
+        }
+        
+        const cardId = dragState.originalCard.id;
+        const cardIndex = boardCards.findIndex(c => c.id === cardId);
+        if (cardIndex > -1) {
+            boardCards[cardIndex].element = dragState.originalCard;
+        }
+        
+        if (multiplayer.gameId) {
+            setTimeout(() => {
+                syncGameStateToFirebase();
+            }, 100);
+        }
+    }
+    
+    dragState.isDragging = false;
+    dragState.card = null;
+    dragState.originalCard = null;
+    dragState.draggingToken = false;
+    
+    document.removeEventListener('mousemove', handleMouseMove);
+    document.removeEventListener('mouseup', handleMouseUp);
+}
+
+// ============================================================================
+// TOKEN FUNCTIONS
 // ============================================================================
 function addTokenToPlayer(player) {
-    // In multiplayer, only allow adding tokens for your own player
     if (multiplayer.gameId && player !== multiplayer.playerNumber) {
         showNotification("Not Allowed", "You can only add tokens for yourself", 'error');
         return;
@@ -2068,7 +2844,6 @@ function addTokenToPlayer(player) {
     token.style.left = `${x}px`;
     token.style.top = `${y}px`;
     
-    // Add controls for our own tokens
     token.innerHTML = `
         <div class="counter-value">0</div>
         <div class="counter-label">${tokenLabel}</div>
@@ -2095,7 +2870,6 @@ function addTokenToPlayer(player) {
     
     showNotification("Token Added", `${tokenLabel} token added`, 'success');
     
-    // Auto-sync to Firebase if in multiplayer
     if (multiplayer.gameId) {
         setTimeout(() => {
             syncGameStateToFirebase();
@@ -2103,209 +2877,147 @@ function addTokenToPlayer(player) {
     }
 }
 
-// ============================================================================
-// FIXED AUTO-SYNC WRAPPER
-// ============================================================================
-function autoSync(originalFunction) {
-    return function(...args) {
-        const result = originalFunction.apply(this, args);
+function changeTokenValue(tokenId, amount) {
+    event.stopPropagation();
+    
+    for (const player of [1, 2]) {
+        const tokenIndex = counterTokens[player].findIndex(token => token.id === tokenId);
+        if (tokenIndex > -1) {
+            if (multiplayer.gameId && player !== multiplayer.playerNumber) return;
+            
+            const token = counterTokens[player][tokenIndex];
+            const newValue = token.value + amount;
+            token.value = newValue;
+            
+            const valueElement = token.element.querySelector('.counter-value');
+            if (valueElement) {
+                valueElement.textContent = newValue;
+            }
+            
+            if (multiplayer.gameId) {
+                setTimeout(() => {
+                    syncGameStateToFirebase();
+                }, 100);
+            }
+            break;
+        }
+    }
+}
+
+function resetPlayerTokens(player) {
+    if (multiplayer.gameId && player !== multiplayer.playerNumber) return;
+    
+    counterTokens[player].forEach(token => {
+        if (token.element && token.element.parentElement) {
+            token.element.remove();
+        }
+    });
+    
+    counterTokens[player] = [];
+    showNotification("Tokens Reset", `Player ${player}'s tokens have been reset!`, 'info', 3000);
+    
+    if (multiplayer.gameId) {
+        setTimeout(() => {
+            syncGameStateToFirebase();
+        }, 100);
+    }
+}
+
+function startTokenDrag(e) {
+    const token = e.target.closest('.counter-token');
+    if (!token) return;
+    
+    const tokenId = token.id;
+    let ourToken = false;
+    for (const player of [1, 2]) {
+        const tokenIndex = counterTokens[player].findIndex(t => t.id === tokenId);
+        if (tokenIndex > -1 && player === multiplayer.playerNumber) {
+            ourToken = true;
+            break;
+        }
+    }
+    
+    if (!ourToken) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    dragState.mouseDownTime = Date.now();
+    dragState.startX = e.clientX;
+    dragState.startY = e.clientY;
+    
+    dragState.originalCard = token;
+    dragState.originalParent = token.parentElement;
+    dragState.originalLeft = parseFloat(token.style.left) || 0;
+    dragState.originalTop = parseFloat(token.style.top) || 0;
+    dragState.draggingToken = true;
+    
+    document.addEventListener('mousemove', handleTokenMouseMove);
+    document.addEventListener('mouseup', handleTokenMouseUp);
+}
+
+function handleTokenMouseMove(e) {
+    if (!dragState.originalCard || !dragState.draggingToken) return;
+    
+    const currentTime = Date.now();
+    const timeDiff = currentTime - dragState.mouseDownTime;
+    const distanceX = Math.abs(e.clientX - dragState.startX);
+    const distanceY = Math.abs(e.clientY - dragState.startY);
+    
+    if (!dragState.isDragging && (timeDiff > 50 || distanceX > 5 || distanceY > 5)) {
+        dragState.isDragging = true;
         
-        // Auto-sync after any game action
-        if (multiplayer.gameId && !multiplayer.isSyncing) {
+        dragState.card = dragState.originalCard.cloneNode(true);
+        dragState.card.classList.add('dragging');
+        dragState.card.style.width = "50px";
+        dragState.card.style.height = "50px";
+        dragState.card.style.left = `${e.clientX - 25}px`;
+        dragState.card.style.top = `${e.clientY - 25}px`;
+        document.body.appendChild(dragState.card);
+        
+        dragState.originalCard.style.visibility = "hidden";
+    }
+    
+    if (dragState.isDragging && dragState.card) {
+        dragState.card.style.left = `${e.clientX - 25}px`;
+        dragState.card.style.top = `${e.clientY - 25}px`;
+    }
+}
+
+function handleTokenMouseUp(e) {
+    if (dragState.isDragging && dragState.draggingToken) {
+        const playerArea = dragState.originalParent;
+        const rect = playerArea.getBoundingClientRect();
+        
+        const relativeX = e.clientX - rect.left - 25;
+        const relativeY = e.clientY - rect.top - 25;
+        
+        const boundedX = Math.max(0, Math.min(relativeX, rect.width - 50));
+        const boundedY = Math.max(0, Math.min(relativeY, rect.height - 50));
+        
+        dragState.originalCard.style.left = `${boundedX}px`;
+        dragState.originalCard.style.top = `${boundedY}px`;
+        dragState.originalCard.style.visibility = "visible";
+        
+        if (dragState.card) {
+            dragState.card.remove();
+        }
+        
+        const tokenId = dragState.originalCard.id;
+        for (const player of [1, 2]) {
+            const tokenIndex = counterTokens[player].findIndex(token => token.id === tokenId);
+            if (tokenIndex > -1) {
+                counterTokens[player][tokenIndex].position = { x: boundedX, y: boundedY };
+                break;
+            }
+        }
+        
+        if (multiplayer.gameId) {
             setTimeout(() => {
                 syncGameStateToFirebase();
             }, 100);
         }
-        
-        return result;
-    };
-}
-
-// ============================================================================
-// FIXED HAND VIEW - ALLOW PLAYER 2 TO VIEW THEIR HAND
-// ============================================================================
-function viewHand(player) {
-    // In multiplayer, check if player is trying to view their own hand
-    if (multiplayer.gameId) {
-        if (player !== multiplayer.playerNumber) {
-            showNotification("Not Allowed", "You can only view your own hand", 'warning');
-            return;
-        }
     }
-    
-    const overlay = document.getElementById("handOverlay");
-    const container = document.getElementById("handCardsContainer");
-    document.getElementById("handTitle").textContent = `Player ${player}'s Hand (${hands[player].length} Cards)`;
-    container.innerHTML = "";
-
-    hands[player].forEach(cardData => {
-        const card = document.createElement("div");
-        card.className = "hand-display-card";
-        
-        const img = new Image();
-        img.onload = function() {
-            card.style.backgroundImage = `url('${cardData.image}')`;
-        };
-        img.onerror = function() {
-            card.style.backgroundColor = cardData.color || "#555";
-        };
-        img.src = cardData.image;
-        
-        if (cardData.color) {
-            card.style.borderColor = cardData.color;
-            card.style.borderWidth = "3px";
-        }
-        
-        card.onclick = () => {
-            // In multiplayer, only allow viewing own hand cards
-            if (multiplayer.gameId && player !== multiplayer.playerNumber) {
-                showNotification("Not Allowed", "You can only view cards from your own hand", 'warning');
-                return;
-            }
-            showCardZoom(cardData.image, { 
-                type: 'hand', 
-                player: player, 
-                cardId: cardData.id 
-            });
-        };
-        container.appendChild(card);
-    });
-
-    overlay.style.display = "flex";
-}
-
-// ============================================================================
-// FIXED BOARD STATE UPDATE HANDLER
-// ============================================================================
-function handleBoardStateUpdate(snapshot) {
-    if (!snapshot.exists() || !multiplayer.gameId || multiplayer.isSyncing) return;
-    
-    const boardState = snapshot.val();
-    
-    // Skip if this is our own update
-    if (boardState.lastUpdatePlayer === multiplayer.playerNumber) {
-        return;
-    }
-    
-    // Update game state from Firebase
-    syncGameStateFromFirebase(boardState);
-}
-
-// ============================================================================
-// FIXED GAME FUNCTIONS - ALLOW PLAYER 2 TO USE THEM
-// ============================================================================
-function drawCardWithAnimation(player) {
-    // In multiplayer, check if player is trying to use their own deck
-    if (multiplayer.gameId && player !== multiplayer.playerNumber) {
-        showNotification("Not Allowed", "You can only draw from your own deck", 'error');
-        return;
-    }
-    
-    if (decks[player].length === 0) {
-        showNotification("Deck Empty", "Open Shop to add cards to your deck!", 'warning');
-        return;
-    }
-    
-    const cardData = decks[player].shift();
-    hands[player].push(cardData);
-    updateCounters();
-    updateDeckVisual(player);
-    
-    showNotification("Card Drawn", `Player ${player} drew 1 card`, 'success');
-    
-    // Auto-sync to Firebase if in multiplayer
-    if (multiplayer.gameId) {
-        setTimeout(() => {
-            syncGameStateToFirebase();
-        }, 100);
-    }
-}
-
-function openFromDeck(player) {
-    // In multiplayer, check if player is trying to use their own deck
-    if (multiplayer.gameId && player !== multiplayer.playerNumber) {
-        showNotification("Not Allowed", "You can only open from your own deck", 'error');
-        return;
-    }
-    
-    if (decks[player].length === 0) {
-        showNotification("Deck Empty", "No cards in deck!", 'warning');
-        return;
-    }
-    
-    const cardData = decks[player].shift();
-    createBoardCard(cardData, player);
-    updateCounters();
-    updateDeckVisual(player);
-    
-    showNotification("Card Opened", `Player ${player} opened a card`, 'success');
-}
-
-function shuffleDeckWithAnimation(player) {
-    // In multiplayer, check if player is trying to shuffle their own deck
-    if (multiplayer.gameId && player !== multiplayer.playerNumber) {
-        showNotification("Not Allowed", "You can only shuffle your own deck", 'error');
-        return;
-    }
-    
-    if (decks[player].length === 0) {
-        showNotification("Deck Empty", "No cards to shuffle!", 'warning');
-        return;
-    }
-    
-    decks[player].sort(() => Math.random() - 0.5);
-    updateDeckVisual(player);
-    
-    showNotification("Deck Shuffled", `Player ${player}'s deck shuffled`, 'success');
-    
-    // Auto-sync to Firebase if in multiplayer
-    if (multiplayer.gameId) {
-        setTimeout(() => {
-            syncGameStateToFirebase();
-        }, 100);
-    }
-}
-
-// ============================================================================
-// FIXED INITIALIZATION
-// ============================================================================
-window.addEventListener('load', function() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const gameCode = urlParams.get('game');
-    
-    if (gameCode && gameCode.length === 6) {
-        document.getElementById('gameCodeInput').value = gameCode;
-        showMultiplayerMenu();
-        
-        setTimeout(() => {
-            if (database) {
-                joinGame();
-            }
-        }, 1000);
-    }
-    
-    updateCounters();
-    initializeLifeZones();
-    setupShop();
-});
-
-// Apply auto-sync to key functions
-drawCardWithAnimation = autoSync(drawCardWithAnimation);
-shuffleDeckWithAnimation = autoSync(shuffleDeckWithAnimation);
-openFromDeck = autoSync(openFromDeck);
-createBoardCard = autoSync(createBoardCard);
-addTokenToPlayer = autoSync(addTokenToPlayer);
-playToBoard = autoSync(playToBoard);
-moveToHand = autoSync(moveToHand);
-moveToGY = autoSync(moveToGY);
-addToDeck = autoSync(addToDeck);
-rotateCard = autoSync(rotateCard);
-rotateCardDirect = autoSync(rotateCardDirect);
-resetPlayerTokens = autoSync(resetPlayerTokens);
-shuffleLifeZones = autoSync(shuffleLifeZones);
-removeFromLifeZone = autoSync(removeFromLifeZone);
-flipLifeZoneCard = autoSync(flipLifeZoneCard);
-addToLifeZone = autoSync(addToLifeZone);
     
     dragState.isDragging = false;
     dragState.card = null;
@@ -2314,7 +3026,7 @@ addToLifeZone = autoSync(addToLifeZone);
     
     document.removeEventListener('mousemove', handleTokenMouseMove);
     document.removeEventListener('mouseup', handleTokenMouseUp);
-
+}
 
 // ============================================================================
 // LIFE ZONE FUNCTIONS
@@ -2388,6 +3100,12 @@ function handleLifeZoneDrop(e) {
             updateLifeZoneDisplay(player, index, lifeZones[player][index], player !== multiplayer.playerNumber);
             
             showNotification("Card Added to Life Zone", `Card added to Life Zone ${index + 1} for Player ${player}`, 'success', 3000);
+            
+            if (multiplayer.gameId) {
+                setTimeout(() => {
+                    syncGameStateToFirebase();
+                }, 100);
+            }
             return;
         }
     }
@@ -2417,6 +3135,12 @@ function handleLifeZoneDrop(e) {
             closeZoomOnly();
             
             showNotification("Card Added to Life Zone", `Card added to Life Zone ${index + 1} for Player ${player}`, 'success', 3000);
+            
+            if (multiplayer.gameId) {
+                setTimeout(() => {
+                    syncGameStateToFirebase();
+                }, 100);
+            }
             return;
         }
     }
@@ -2505,8 +3229,13 @@ function returnCardFromLifeZone(player, index) {
     updateLifeZoneDisplay(player, index, null, player !== multiplayer.playerNumber);
     
     showNotification("Card Returned to Board", `Card returned from Life Zone ${index + 1} to board`, 'info', 3000);
+    
+    if (multiplayer.gameId) {
+        setTimeout(() => {
+            syncGameStateToFirebase();
+        }, 100);
+    }
 }
-returnCardFromLifeZone = autoSync(returnCardFromLifeZone);
 
 function shuffleLifeZones(player) {
     if (multiplayer.gameId && player !== multiplayer.playerNumber) return;
@@ -2534,8 +3263,13 @@ function shuffleLifeZones(player) {
     }
     
     showNotification("Life Zones Shuffled", `Player ${player}'s life zones have been shuffled!`, 'success', 3000);
+    
+    if (multiplayer.gameId) {
+        setTimeout(() => {
+            syncGameStateToFirebase();
+        }, 100);
+    }
 }
-shuffleLifeZones = autoSync(shuffleLifeZones);
 
 function removeFromLifeZone() {
     if (!currentZoomSource || currentZoomSource.type !== 'lifezone') return;
@@ -2565,10 +3299,15 @@ function removeFromLifeZone() {
             updateLifeZoneDisplay(player, zoneIndex, null, player !== multiplayer.playerNumber);
             updateCounters();
             closeZoomOnly();
+            
+            if (multiplayer.gameId) {
+                setTimeout(() => {
+                    syncGameStateToFirebase();
+                }, 100);
+            }
         }, 100);
     }
 }
-removeFromLifeZone = autoSync(removeFromLifeZone);
 
 function flipLifeZoneCard() {
     if (!currentZoomSource || currentZoomSource.type !== 'lifezone') return;
@@ -2589,9 +3328,14 @@ function flipLifeZoneCard() {
         
         const status = cardData.flipped ? "flipped face-down" : "flipped face-up";
         showNotification("Card Flipped", `Life Zone ${zoneIndex + 1} card ${status}`, 'info', 2000);
+        
+        if (multiplayer.gameId) {
+            setTimeout(() => {
+                syncGameStateToFirebase();
+            }, 100);
+        }
     }
 }
-flipLifeZoneCard = autoSync(flipLifeZoneCard);
 
 function addToLifeZone(player) {
     if (!currentShopImage) {
@@ -2628,8 +3372,13 @@ function addToLifeZone(player) {
     
     showNotification("Card Added to Life Zone", `Card added to Life Zone ${emptyIndex + 1} for Player ${player}`, 'success', 3000);
     currentShopImage = null;
+    
+    if (multiplayer.gameId) {
+        setTimeout(() => {
+            syncGameStateToFirebase();
+        }, 100);
+    }
 }
-addToLifeZone = autoSync(addToLifeZone);
 
 // ============================================================================
 // VIEW FUNCTIONS
@@ -2663,11 +3412,13 @@ function viewHand(player) {
             card.style.borderWidth = "3px";
         }
         
-        card.onclick = () => showCardZoom(cardData.image, { 
-            type: 'hand', 
-            player: player, 
-            cardId: cardData.id 
-        });
+        card.onclick = () => {
+            showCardZoom(cardData.image, { 
+                type: 'hand', 
+                player: player, 
+                cardId: cardData.id 
+            });
+        };
         container.appendChild(card);
     });
 
@@ -2798,9 +3549,13 @@ function rotateCardDirect(cardElement) {
     if (cardIndex > -1) {
         boardCards[cardIndex].rotated = !boardCards[cardIndex].rotated;
     }
+    
+    if (multiplayer.gameId) {
+        setTimeout(() => {
+            syncGameStateToFirebase();
+        }, 100);
+    }
 }
-rotateCard = autoSync(rotateCard);
-rotateCardDirect = autoSync(rotateCardDirect);
 
 function showDeleteConfirmation() {
     if (!currentZoomSource || currentZoomSource.type !== 'board') return;
@@ -2842,13 +3597,18 @@ function confirmDeleteCard() {
                 document.getElementById('confirmDeleteOverlay').style.display = 'none';
                 closeZoomOnly();
                 showNotification("Card Deleted", "Card has been permanently deleted!", 'info', 3000);
+                
+                if (multiplayer.gameId) {
+                    setTimeout(() => {
+                        syncGameStateToFirebase();
+                    }, 100);
+                }
             }, 500);
         }
     }
     
     cardToDelete = null;
 }
-confirmDeleteCard = autoSync(confirmDeleteCard);
 
 function cancelDeleteCard() {
     cardToDelete = null;
@@ -2865,9 +3625,14 @@ function flipLifeZoneCardDirect(player, index) {
         
         const status = cardData.flipped ? "flipped face-down" : "flipped face-up";
         showNotification("Card Flipped", `Life Zone ${index + 1} card ${status}`, 'info', 2000);
+        
+        if (multiplayer.gameId) {
+            setTimeout(() => {
+                syncGameStateToFirebase();
+            }, 100);
+        }
     }
 }
-flipLifeZoneCardDirect = autoSync(flipLifeZoneCardDirect);
 
 // ============================================================================
 // INITIALIZATION
@@ -2884,7 +3649,7 @@ window.addEventListener('load', function() {
             if (database) {
                 joinGame();
             }
-        }, 500);
+        }, 1000);
     }
     
     updateCounters();
