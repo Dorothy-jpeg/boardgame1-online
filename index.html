@@ -1612,9 +1612,11 @@ import { initializeApp } from "firebase/app";
 // https://firebase.google.com/docs/web/setup#available-libraries
 
 // Your web app's Firebase configuration
+
 const firebaseConfig = {
   apiKey: "AIzaSyCNap3c9oxYBuomxLF1020HI0KEeRYMhBg",
   authDomain: "boardgame1-online.firebaseapp.com",
+  databaseURL: "https://boardgame1-online.firebaseio.com",  // ← ADD THIS LINE!
   projectId: "boardgame1-online",
   storageBucket: "boardgame1-online.firebasestorage.app",
   messagingSenderId: "855871478226",
