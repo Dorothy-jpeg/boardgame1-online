@@ -1640,33 +1640,35 @@ let currentShopImage = null;
 const CARD_CATEGORIES = {
     avatar: {
         name: "Avatar",
-        folder: "Taling/Avatar/",
+        folder: "https://res.cloudinary.com/YOUR_CLOUD_NAME/image/upload/v1/cards/avatar/",
         prefix: "avatar",
         count: 484,
         color: "#4A90E2"
     },
     magic: {
         name: "Magic",
-        folder: "Taling/Magic/",
+        folder: "https://res.cloudinary.com/YOUR_CLOUD_NAME/image/upload/v1/cards/magic/",
         prefix: "magic",
         count: 219,
         color: "#9013FE"
     },
     construct: {
         name: "Construct",
-        folder: "Taling/Construct/",
+        folder: "https://res.cloudinary.com/YOUR_CLOUD_NAME/image/upload/v1/cards/construct/",
         prefix: "con",
         count: 18,
         color: "#F5A623"
     },
     life: {
         name: "Life",
-        folder: "Taling/Life/",
+        folder: "https://res.cloudinary.com/YOUR_CLOUD_NAME/image/upload/v1/cards/life/",
         prefix: "life",
         count: 48,
         color: "#7ED321"
     }
 };
+
+const IMAGE_EXT = ".png"; // Cloudinary doesn't need extension, but keep it for your logic
 
 const TOKEN_COLORS = {
     1: ['#ff6b6b', '#4ecdc4', '#ffe66d', '#95e1d3'],
@@ -3717,3 +3719,4 @@ document.head.appendChild(style);
 </script>
 </body>
 </html>
+
