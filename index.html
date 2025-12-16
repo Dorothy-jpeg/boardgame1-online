@@ -1587,6 +1587,137 @@ function showNotification(title, message, type = 'info', duration = 3000) {
 }
 
 // ============================================================================
+// CLOUDINARY CONFIGURATION - USING YOUR CLOUD NAME
+// ============================================================================
+const CLOUD_NAME = "dlkpniqxp";
+
+const CARD_CATEGORIES = {
+    avatar: {
+        name: "Avatar",
+        folder: `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/Taling/Avatar/`,
+        prefix: "avatar",
+        count: 484,
+        color: "#4A90E2"
+    },
+    magic: {
+        name: "Magic",
+        folder: `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/Taling/Magic/`,
+        prefix: "magic",
+        count: 219,
+        color: "#9013FE"
+    },
+    construct: {
+        name: "Construct",
+        folder: `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/Taling/Construct/`,
+        prefix: "con",
+        count: 18,
+        color: "#F5A623"
+    },
+    life: {
+        name: "Life",
+        folder: `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/Taling/Life/`,
+        prefix: "life",
+        count: 48,
+        color: "#7ED321"
+    }
+};
+
+const IMAGE_EXT = ".png";
+
+// ============================================================================
+// IMAGE LOADING SYSTEM WITH CLOUDINARY OPTIMIZATION
+// ============================================================================
+const imageCache = new Map();
+
+// Helper function for optimized Cloudinary URLs
+function getOptimizedCloudinaryUrl(imageUrl) {
+    // Skip optimization if not a Cloudinary URL
+    if (!imageUrl.includes('cloudinary.com')) return imageUrl;
+    
+    // Add optimization transformations
+    // w_120: width 120px (matches card width)
+    // h_180: height 180px (matches card height)
+    // c_fill: fill crop mode
+    // f_auto: auto format (WebP/AVIF if supported)
+    // q_auto: auto quality optimization
+    return imageUrl.replace('/upload/', '/upload/w_120,h_180,c_fill,f_auto,q_auto/');
+}
+
+function loadImageWithFallback(imageUrl, element, fallbackColor = "#555") {
+    // Check cache first
+    if (imageCache.has(imageUrl)) {
+        const cached = imageCache.get(imageUrl);
+        if (cached.loaded) {
+            element.style.backgroundImage = `url('${getOptimizedCloudinaryUrl(imageUrl)}')`;
+        } else {
+            element.style.backgroundColor = fallbackColor;
+        }
+        return;
+    }
+    
+    // Optimize Cloudinary URL
+    const optimizedUrl = getOptimizedCloudinaryUrl(imageUrl);
+    
+    // Add to cache as loading
+    imageCache.set(imageUrl, { loaded: false });
+    
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    
+    img.onload = function() {
+        element.style.backgroundImage = `url('${optimizedUrl}')`;
+        element.style.backgroundSize = 'cover';
+        element.style.backgroundPosition = 'center';
+        element.style.backgroundRepeat = 'no-repeat';
+        imageCache.set(imageUrl, { loaded: true });
+    };
+    
+    img.onerror = function() {
+        console.warn(`Failed to load image: ${optimizedUrl}`);
+        // Try original URL as fallback
+        const img2 = new Image();
+        img2.onload = function() {
+            element.style.backgroundImage = `url('${imageUrl}')`;
+            element.style.backgroundSize = 'cover';
+            element.style.backgroundPosition = 'center';
+            element.style.backgroundRepeat = 'no-repeat';
+            imageCache.set(imageUrl, { loaded: true });
+        };
+        img2.onerror = function() {
+            element.style.backgroundColor = fallbackColor;
+            element.style.backgroundImage = 'none';
+            
+            // Create fallback text
+            const categoryMatch = imageUrl.match(/(avatar|magic|con|life)/);
+            if (categoryMatch) {
+                const category = categoryMatch[0];
+                const categoryNames = {
+                    'avatar': 'AVATAR',
+                    'magic': 'MAGIC',
+                    'con': 'CONSTRUCT',
+                    'life': 'LIFE'
+                };
+                
+                const numberMatch = imageUrl.match(/(\d+)/);
+                const cardNumber = numberMatch ? numberMatch[1] : '?';
+                
+                element.innerHTML = `
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: white; font-size: 12px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">
+                        <div>${categoryNames[category] || 'CARD'}</div>
+                        <div>#${cardNumber}</div>
+                    </div>
+                `;
+            }
+            
+            imageCache.set(imageUrl, { loaded: false });
+        };
+        img2.src = imageUrl;
+    };
+    
+    img.src = optimizedUrl;
+}
+
+// ============================================================================
 // MULTIPLAYER STATE
 // ============================================================================
 let multiplayer = {
@@ -1637,39 +1768,6 @@ let quantitySelectorState = {
 let currentShopCategory = 'all';
 let currentShopImage = null;
 
-const CARD_CATEGORIES = {
-    avatar: {
-        name: "Avatar",
-        folder: "https://res.cloudinary.com/YOUR_CLOUD_NAME/image/upload/v1/cards/avatar/",
-        prefix: "avatar",
-        count: 484,
-        color: "#4A90E2"
-    },
-    magic: {
-        name: "Magic",
-        folder: "https://res.cloudinary.com/YOUR_CLOUD_NAME/image/upload/v1/cards/magic/",
-        prefix: "magic",
-        count: 219,
-        color: "#9013FE"
-    },
-    construct: {
-        name: "Construct",
-        folder: "https://res.cloudinary.com/YOUR_CLOUD_NAME/image/upload/v1/cards/construct/",
-        prefix: "con",
-        count: 18,
-        color: "#F5A623"
-    },
-    life: {
-        name: "Life",
-        folder: "https://res.cloudinary.com/YOUR_CLOUD_NAME/image/upload/v1/cards/life/",
-        prefix: "life",
-        count: 48,
-        color: "#7ED321"
-    }
-};
-
-const IMAGE_EXT = ".png"; // Cloudinary doesn't need extension, but keep it for your logic
-
 const TOKEN_COLORS = {
     1: ['#ff6b6b', '#4ecdc4', '#ffe66d', '#95e1d3'],
     2: ['#ff9a76', '#a8e6cf', '#ffd3b6', '#a8d8ea']
@@ -1677,7 +1775,6 @@ const TOKEN_COLORS = {
 
 const TOKEN_LABELS = ['Health', 'Mana', 'Attack', 'Defense'];
 
-const IMAGE_EXT = ".png";
 let allShopCards = [];
 
 // ============================================================================
@@ -3719,4 +3816,5 @@ document.head.appendChild(style);
 </script>
 </body>
 </html>
+
 
