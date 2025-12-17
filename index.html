@@ -3284,6 +3284,26 @@ function setupShop() {
             name: `Avatar ${index + 1}`
         });
     });
+
+    magicImages.forEach((imageUrl, index) => {
+        allShopCards.push({
+            image: imageUrl,
+            category: "magic",
+            categoryName: "Magic",
+            color: "#9013FE",
+            name: `Magic ${index + 1}`
+        });
+    });
+
+    conImages.forEach((imageUrl, index) => {
+        allShopCards.push({
+            image: imageUrl,
+            category: "construct",
+            categoryName: "Construct",
+            color: "#F5A623",
+            name: `Construct ${index + 1}`
+        });
+    });
     
     // Add other categories using the folder structure
     for (const [categoryId, category] of Object.entries(CARD_CATEGORIES)) {
@@ -4457,5 +4477,6 @@ document.head.appendChild(style);
 </script>
 </body>
 </html>
+
 
 
