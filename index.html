@@ -23,7 +23,6 @@
             flex-grow: 1;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
         }
 
         .player-area {
@@ -34,7 +33,6 @@
             border-bottom: 2px solid #444;
             margin: 2px 0;
             overflow: hidden;
-            min-height: 250px;
         }
 
         .card {
@@ -105,29 +103,9 @@
             border: 1px solid #666;
         }
 
-        button { 
-            margin: 2px; 
-            padding: 6px 12px; 
-            cursor: pointer; 
-            background: #444; 
-            color: #fff; 
-            border: 1px solid #666; 
-            border-radius: 4px; 
-            font-family: inherit;
-            pointer-events: auto;
-        }
+        button { margin: 2px; padding: 6px 12px; cursor: pointer; background: #444; color: #fff; border: 1px solid #666; border-radius: 4px; }
         button:hover { background: #666; }
-        #shopButton { 
-            position: absolute; 
-            top: 50%; 
-            right: 10px; 
-            transform: translateY(-50%); 
-            z-index: 200; 
-            background: #d4af37; 
-            color: #000; 
-            font-weight: bold; 
-            pointer-events: auto;
-        }
+        #shopButton { position: absolute; top: 50%; right: 10px; transform: translateY(-50%); z-index: 200; background: #d4af37; color: #000; font-weight: bold; }
 
         .small-token-btn {
             background: #6a0dad;
@@ -327,85 +305,21 @@
         }
         .hand-display-card:hover, .shop-card:hover { border-color: yellow; }
 
-        .overlay { 
-            position: fixed; 
-            inset: 0; 
-            background: rgba(0,0,0,0.9); 
-            display: none; 
-            z-index: 10000; 
-            justify-content: center; 
-            align-items: center; 
-            flex-direction: column; 
-            pointer-events: auto;
-        }
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; z-index: 10000; justify-content: center; align-items: center; flex-direction: column; }
 
-        #shopWindow { 
-            width: 80%; 
-            height: 80%; 
-            background: #111; 
-            border: 2px solid #444; 
-            padding: 20px; 
-            border-radius: 8px; 
-            display: flex; 
-            flex-direction: column; 
-            pointer-events: auto;
-        }
-        #shopCards { 
-            margin-top: 15px; 
-            display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); 
-            gap: 10px; 
-            overflow-y: auto; 
-            pointer-events: auto;
-        }
-        .category-buttons { 
-            display: flex; 
-            gap: 10px; 
-            margin-bottom: 15px; 
-            flex-wrap: wrap; 
-            pointer-events: auto;
-        }
-        .category-btn { 
-            background: #333; 
-            color: white; 
-            border: 1px solid #555; 
-            padding: 8px 16px; 
-            border-radius: 4px; 
-            cursor: pointer; 
-            pointer-events: auto;
-        }
+        #shopWindow { width: 80%; height: 80%; background: #111; border: 2px solid #444; padding: 20px; border-radius: 8px; display: flex; flex-direction: column; }
+        #shopCards { margin-top: 15px; display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; overflow-y: auto; }
+        .category-buttons { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        .category-btn { background: #333; color: white; border: 1px solid #555; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
         .category-btn:hover { background: #555; }
         .category-btn.active { background: #d4af37; color: #000; font-weight: bold; border-color: #ffd700; }
 
         #zoomOverlay { z-index: 10001; }
-        #zoomCard { 
-            width: 360px; 
-            height: 540px; 
-            background-size: cover; 
-            background-position: center; 
-            border: 4px solid #fff; 
-            border-radius: 12px; 
-            margin-bottom: 15px; 
-            box-shadow: 0 0 20px rgba(0,0,0,0.8); 
-            background-color: #555; 
-        }
+        #zoomCard { width: 360px; height: 540px; background-size: cover; background-position: center; border: 4px solid #fff; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 0 20px rgba(0,0,0,0.8); background-color: #555; }
 
         #handOverlay { z-index: 10000; }
-        #handOverlayContent { 
-            background: #222; 
-            padding: 20px; 
-            border-radius: 8px; 
-            max-width: 90%; 
-            max-height: 90%; 
-            overflow: auto; 
-            pointer-events: auto;
-        }
-        #handCardsContainer { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fill, 120px); 
-            gap: 15px; 
-            margin-top: 20px; 
-        }
+        #handOverlayContent { background: #222; padding: 20px; border-radius: 8px; max-width: 90%; max-height: 90%; overflow: auto; }
+        #handCardsContainer { display: grid; grid-template-columns: repeat(auto-fill, 120px); gap: 15px; margin-top: 20px; }
 
         .graveyard { 
             width: 140px; 
@@ -436,7 +350,6 @@
             align-items: center;
             gap: 5px;
             width: 140px;
-            pointer-events: auto;
         }
         
         .deck-zone { 
@@ -699,7 +612,6 @@
             background-color: #555;
             user-select: none;
             transition: transform 0.3s ease;
-            pointer-events: auto;
         }
         
         .board-card.rotated {
@@ -854,7 +766,6 @@
             box-shadow: 0 3px 6px rgba(0,0,0,0.3);
             transition: transform 0.2s, box-shadow 0.2s;
             user-select: none;
-            pointer-events: auto;
         }
         
         .counter-token:hover {
@@ -1244,7 +1155,6 @@
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
             transition: all 0.3s;
-            pointer-events: auto;
         }
         
         .multiplayer-btn:hover {
@@ -1732,28 +1642,28 @@ const CARD_CATEGORIES = {
         name: "Avatar",
         folder: "Taling/Avatar/",
         prefix: "avatar",
-        count: 10, // Show 10 cards for testing
+        count: 484,  // CHANGED TO 484
         color: "#4A90E2"
     },
     magic: {
         name: "Magic",
         folder: "Taling/Magic/",
         prefix: "magic",
-        count: 10, // Show 10 cards for testing
+        count: 219,
         color: "#9013FE"
     },
     construct: {
         name: "Construct",
         folder: "Taling/Construct/",
         prefix: "con",
-        count: 10, // Show 10 cards for testing
+        count: 18,
         color: "#F5A623"
     },
     life: {
         name: "Life",
         folder: "Taling/Life/",
         prefix: "life",
-        count: 10, // Show 10 cards for testing
+        count: 48,
         color: "#7ED321"
     }
 };
@@ -2639,60 +2549,488 @@ function setupShop() {
     const container = document.getElementById("shopCards");
     allShopCards = [];
     
-    // AVATAR CARDS (10 cards for testing)
+    // Add all Cloudinary avatar images directly
     const avatarImages = [
         "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896378/1avatar_ampfsg.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896379/2avatar_l6w7zz.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896382/3avatar_dp4tls.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896384/4avatar_sjfduq.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896386/5avatar_sowfhm.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896388/6avatar_mk2iwh.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896390/7avatar_huq9gy.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896392/8avatar_ti9dxl.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896394/9avatar_brtzt7.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896396/10avatar_mpvd9f.png"
-    ];
-    
-    // MAGIC CARDS (10 cards for testing)
-    const magicImages = [
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765897113/1magic_onpgdy.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765897134/2magic_hpijvf.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765897143/3magic_gqoakj.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765897149/4magic_innpuy.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765897157/5magic_v9ohgl.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765897165/6magic_eniry3.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765897171/7magic_wamdez.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765897178/8magic_ael6cp.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765897185/9magic_h4shbb.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765897016/10magic_gslcmg.png"
-    ];
-    
-    // CONSTRUCT CARDS (10 cards for testing)
-    const constructImages = [
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896895/1con_h1npdk.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896939/2con_hvbqiu.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896937/3con_z9ojzf.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896937/4con_puhpfk.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896936/5con_rgydfl.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896937/6con_iuz0iy.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896937/7con_csclgh.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896939/8con_thxxn2.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896939/9con_nuz6kr.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896890/10con_uh7tlm.png"
-    ];
-    
-    // LIFE CARDS (10 cards for testing)
-    const lifeImages = [
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896943/1life_exd4ev.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896983/2life_xwrosr.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896998/3life_ltw553.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765897002/4life_nt9vkt.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765897002/5life_v2qrba.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765897003/6life_ekqim9.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765897006/7life_jgmhga.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765897004/8life_kxtquq.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765897003/9life_yoiyjd.png",
-        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896940/10life_jmmbii.png"
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896476/2avatar_jig21h.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896612/3avatar_a34wih.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896764/4avatar_bq6upr.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896795/5avatar_dfqmmy.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896830/6avatar_egsbw9.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896834/7avatar_n1dmza.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896882/8avatar_vrfyxk.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896889/9avatar_vqavng.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896289/10avatar_fervf8.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896294/11avatar_ovywr4.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896300/12avatar_ebgvni.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896307/13avatar_lbis7h.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896315/14avatar_ext6hu.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896325/15avatar_uuejra.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896351/16avatar_wxbsyh.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896356/17avatar_whvgjr.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896372/18avatar_n7s911.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896377/19avatar_b9vg4t.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896386/20avatar_nycr0k.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896391/21avatar_bp85xk.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896403/22avatar_fgrdpy.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896408/23avatar_zz6xyz.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896422/24avatar_rttfzm.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896432/25avatar_gaxz0p.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896445/26avatar_m0aai3.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896465/27avatar_ofctde.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896461/28avatar_vxutee.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896494/30avatar_knzmy4.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896510/31avatar_z4romc.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896507/32avatar_psrxji.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896528/33avatar_khg3we.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896545/34avatar_zrgpy7.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896550/35avatar_r3ta5o.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896572/36avatar_loge2b.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896583/37avatar_ifeuxl.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896605/38avatar_wxcqwo.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896617/39avatar_lmvdu6.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896635/40avatar_wemsrh.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896641/41avatar_vu6tdo.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896662/42avatar_pfljsw.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896690/43avatar_wek8tw.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896723/45avatar_sgr8de.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896738/46avatar_x6oks7.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896761/47avatar_lky5lv.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896764/48avatar_idfymp.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896765/49avatar_sz353v.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896792/50avatar_e20e3i.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896791/51avatar_csgpne.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896791/52avatar_htgcpx.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896792/53avatar_jlpnf2.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896792/54avatar_atzysa.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896791/55avatar_kzhprh.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896794/56avatar_qcpmy2.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896794/57avatar_k6phtb.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896795/58avatar_ih1gh9.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896795/59avatar_h0ap8a.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896794/60avatar_xdiv4j.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896796/61avatar_om4fgn.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896797/62avatar_lrgslp.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896798/63avatar_lbidlg.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896799/64avatar_uupxnn.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896801/65avatar_pbtiec.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896799/66avatar_riuqb6.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896800/67avatar_xvt4vf.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896829/68avatar_nqs2ie.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896832/69avatar_vkxyy8.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896829/70avatar_pyj55z.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896830/71avatar_zlwccu.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896831/72avatar_rshkyl.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896831/73avatar_muzmym.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896833/74avatar_c0t8gp.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896834/75avatar_ragznc.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896836/76avatar_g9mnpm.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896833/77avatar_wf1lzm.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896833/78avatar_p43vfb.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896836/79avatar_nl9m0h.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896837/80avatar_peho7a.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896836/81avatar_gpyumq.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896837/82avatar_lxw81r.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896840/83avatar_qlegbp.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896842/84avatar_ymmln5.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896840/85avatar_jdmgaf.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896840/86avatar_wbeen7.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896888/87avatar_qk55cm.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896882/88avatar_d7lryj.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896882/89avatar_livnkh.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896883/90avatar_cvbca0.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896881/91avatar_ztvvxs.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896884/92avatar_ttelhb.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896891/93avatar_dwcxnq.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896886/94avatar_tvuy1e.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896886/95avatar_lh9l2z.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896887/96avatar_pscr1g.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896887/97avatar_gsjcxl.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896888/98avatar_igc5v1.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896891/99avatar_xbbqb2.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896285/100avatar.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896285/101avatar.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896290/102avatar_kuuswr.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896289/103avatar_jggzyo.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896286/104avatar_s8vsix.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896287/105avatar_vxplok.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896285/106avatar_vbofpf.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896287/107avatar_qfenvh.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896288/108avatar_th1kxu.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896288/109avatar_o6pjln.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896289/110avatar_owhbo9.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896292/111avatar_zcrzrw.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896290/112avatar_eqw7a2.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896291/113avatar_samrml.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896295/114avatar_w1uk3l.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896291/115avatar_hbvnoa.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896291/116avatar_f8lukn.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896295/117avatar_lgaxmz.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896293/118avatar_tsbpv8.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896294/119avatar_qu9swy.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896298/120avatar_twmrtm.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896294/121avatar_ujjfjm.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896297/122avatar_vpyekc.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896296/123avatar_zuwfny.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896297/124avatar_ybhzlp.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896297/125avatar_gxs4cn.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896299/126avatar_lopsqc.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896298/127avatar_hvxuyu.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896299/128avatar_ebrcpu.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896299/129avatar_gwewbw.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896299/130avatar_irwze6.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896304/131avatar_p0qpcx.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896301/132avatar_eyjkim.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896301/133avatar_cdnrsu.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896301/134avatar_hvyjd2.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896302/135avatar_uubd2h.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896304/136avatar_wxefvy.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896303/137avatar_u8vz9n.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896304/138avatar_hvnsyr.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896306/139avatar_hxy89g.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896306/140avatar_dxkpud.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896308/141avatar_cct1dd.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896309/142avatar_qwbg9x.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896308/143avatar_gj7fmk.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896308/144avatar_pewxtt.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896314/145avatar_hvurov.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896314/146avatar_ekrefn.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896315/147avatar_eaqjgb.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896315/148avatar_lk4m3e.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896315/149avatar_gv0vwt.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896317/150avatar_b3elat.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896317/151avatar_musg5a.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896323/152avatar_u6dker.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896323/153avatar_nsvqh2.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896323/154avatar_c0vy7r.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896323/155avatar_ailchq.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896323/156avatar_mzpjgv.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896323/157avatar_fvn2pl.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896326/158avatar_lpawol.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896325/159avatar_yii7bc.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896326/160avatar_n3zqmp.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896326/161avatar_nidjgt.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896327/162avatar_qrwio5.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896328/163avatar_yvq8dn.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896329/164avatar_bh3awv.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896329/165avatar_dyhgkm.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896330/166avatar_ersmn6.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896331/168avatar_arsihh.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896352/169avatar_iyrw1g.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896351/170avatar_wdgort.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896353/171avatar_zkdmhv.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896354/172avatar_funbc0.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896353/173avatar_xej3tn.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896354/174avatar_tbixp2.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896355/175avatar_jzkexl.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896356/176avatar_iafckn.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896356/177avatar_rmmpc0.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896358/178avatar_scgqir.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896356/179avatar_vfe7qv.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896358/180avatar_gqxxrk.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896359/181avatar_trkivj.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896359/182avatar_jergth.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896362/183avatar_ssqvl8.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896362/184avatar_tfqwnz.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896367/185avatar_kxsbdp.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896370/186avatar_wr8bet.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896374/187avatar_evxl6q.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896373/188avatar_vox7px.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896375/189avatar_e49ugq.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896371/190avatar_y6wdmx.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896373/191avatar_akvz5c.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896374/192avatar_k3gdys.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896375/193avatar_gteybj.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896375/194avatar_nbdr2u.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896376/195avatar_br9rfb.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896376/196avatar_poeiil.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896376/197avatar_eihriw.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896378/198avatar_kjb087.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896380/199avatar_qdb3yq.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896379/200avatar_mtzdyj.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896380/201avatar_pqnc1k.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896379/202avatar_sjphek.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896381/203avatar_os7ppv.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896381/204avatar_h2zvym.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896383/205avatar_mhaxok.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896382/206avatar_rci5nd.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896382/207avatar_t477mh.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896382/208avatar_ladvm3.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896383/209avatar_sivwhb.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896386/210avatar_tqok0b.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896386/211avatar_gohruu.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896386/212avatar_nelidr.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896386/213avatar_eng48r.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896387/214avatar_zayqew.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896391/215avatar_ntjott.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896392/216avatar_atytkm.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896390/217avatar_qeoh8p.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896396/218avatar_g2qvxd.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896391/219avatar_eus8oe.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896393/220avatar_tye3gj.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896395/221avatar_fcwh7l.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896395/222avatar_kny69g.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896396/223avatar_xf44ct.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896396/224avatar_u3arse.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896396/225avatar_jcc9bp.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896403/226avatar_nh3zzq.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896403/227avatar_ni6cq4.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765991489/228avatar_ypveww.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896403/229avatar_pcslx4.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896403/230avatar_e6pvl2.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896405/231avatar_woutw9.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896405/232avatar_ftjqpt.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896406/233avatar_np56dy.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896406/234avatar_muu44p.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896413/235avatar_krm3kl.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896406/236avatar_cazwwg.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896406/237avatar_zziuxf.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896408/238avatar_ul3dn8.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896409/239avatar_fmidqi.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896409/240avatar_h6eckz.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896413/241avatar_yz3qzu.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896413/242avatar_xx6b85.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896415/243avatar_ejl4dz.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896416/244avatar_mhgpim.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896417/245avatar_dq1rhl.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896420/246avatar_gnjgqd.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896420/247avatar_gmwgod.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896423/248avatar_dhcybb.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896422/249avatar_aygfun.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896422/250avatar_plredz.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896424/251avatar_q7vclu.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896424/252avatar_ukzvec.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896424/253avatar_bmyzfb.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896426/254avatar_pqvp3q.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896430/255avatar_myuwch.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896430/256avatar_fjweuy.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896431/257avatar_lx8yh8.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896432/258avatar_o9tg9z.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896432/259avatar_diibui.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896432/260avatar_vjgpkl.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896434/261avatar_otxyxv.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896433/262avatar_qedisv.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896435/263avatar_zlgnqn.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896434/264avatar_izojcl.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896435/265avatar_teeyfy.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896439/266avatar_eykfcv.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896439/267avatar_zaiwkx.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896443/268avatar_yjrior.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896443/269avatar_uivaew.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896447/270avatar_bp7cyr.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896445/271avatar_tpeevz.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896446/272avatar_ex8h7r.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896446/273avatar_y3blha.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896447/274avatar_jrscgs.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896447/275avatar_hppu21.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896448/276avatar_qumdtq.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896448/277avatar_ixclb2.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896456/278avatar_tyb0s9.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896455/279avatar_uirsa7.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896459/280avatar_gkzs7r.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896456/281avatar_jlkfda.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896458/282avatar_w0uyvs.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896457/283avatar_xabsly.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896458/284avatar_gaumuz.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896459/285avatar_tunwo8.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896459/286avatar_cf3d6k.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896460/287avatar_snu1eo.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896462/288avatar_pugn3u.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896462/289avatar_hzle1v.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896464/290avatar_ok4czn.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896471/291avatar_pqrsjh.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896472/292avatar_f2x6ga.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896472/293avatar_xktx3z.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896472/294avatar_b62jvg.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896472/295avatar_yxomze.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896473/296avatar_s9pd7v.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896475/297avatar_vxxf9u.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896474/298avatar_bvgjqt.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896476/299avatar_iov3cj.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896479/300avatar_kc2dhr.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896478/301avatar_ukcami.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896478/302avatar_b7tqxt.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896479/303avatar_pjawuu.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896488/304avatar_mpjwoh.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896491/305avatar_uph7iq.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896490/306avatar_i6pvyz.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896489/307avatar_daemt2.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896491/308avatar_gs7rf2.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896492/309avatar_czervn.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896494/310avatar_vul4b3.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896497/311avatar_p4onn5.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896495/312avatar_ghbhhz.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896498/313avatar_urgayz.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896496/314avatar_ijoot8.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896497/315avatar_h4nviw.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896498/316avatar_ioq2rm.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896499/317avatar_wtm947.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896500/318avatar_qqlyrz.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896499/319avatar_i68q7x.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896502/320avatar_hkl07n.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896502/321avatar_aaxcym.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896501/322avatar_s7ygne.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896503/323avatar_bayqv2.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896504/324avatar_frnqp9.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896504/325avatar_pcv5vh.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896506/326avatar_sdddno.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896506/327avatar_koqaz5.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896505/328avatar_yi6lw9.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896507/329avatar_otpryf.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896509/330avatar_fughrd.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896510/331avatar_xmmzjh.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896510/332avatar_lh5dss.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896510/333avatar_cwzk9m.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896526/335avatar_pwzybe.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896527/336avatar_gfdv2w.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896527/337avatar_vffxls.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896527/338avatar_tw6ij6.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896527/339avatar_rbeche.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896531/340avatar_hx5you.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896529/341avatar_ipldbm.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896530/342avatar_tg8ivx.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896530/343avatar_ks1nma.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896530/344avatar_z1sovz.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896531/345avatar_inhujy.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896531/346avatar_plafgd.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896545/347avatar_igmw7i.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896553/348avatar_gex812.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896544/349avatar_b4nmy0.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896545/350avatar_e7nwcr.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896545/351avatar_wp0job.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896547/352avatar_pozhju.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896547/353avatar_fgmqtz.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896550/354avatar_xyuldv.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896548/355avatar_pp2vqt.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896548/356avatar_nujlh2.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896548/357avatar_udjsd5.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896549/358avatar_smojrk.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896550/359avatar_ghex5r.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896551/360avatar_ajel7r.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896552/361avatar_ecmbxm.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896555/362avatar_l9wbya.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896556/363avatar_ehim2m.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896582/364avatar_km6pgy.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896570/365avatar_r3j6bg.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896569/366avatar_vq4poz.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896576/367avatar_nczqav.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896571/368avatar_uqjx7u.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896571/369avatar_p4hnf2.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896575/370avatar_s0qvcb.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896576/371avatar_sikmp8.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896574/372avatar_zlnafk.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896576/373avatar_umcfxw.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896579/374avatar_pbir9k.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896580/375avatar_iwqcph.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896581/376avatar_pgcxii.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896578/377avatar_swejoe.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896581/378avatar_rs32uc.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896580/379avatar_l2u0sv.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896584/380avatar_szftfe.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896584/381avatar_xrkmn8.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896587/382avatar_gtd4uo.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896583/383avatar_ntvmk6.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896587/384avatar_uwisg5.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896585/385avatar_wileby.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896588/386avatar_w4mfl8.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896587/387avatar_s19zaj.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896608/388avatar_lhbtsy.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896605/389avatar_vjkmx8.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896606/390avatar_jdyhd2.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896605/391avatar_urd1ae.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896605/392avatar_qrwvun.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896607/393avatar_ejzvza.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896607/394avatar_s3w8qh.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896610/395avatar_emk6kh.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896608/396avatar_yuazxs.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896610/397avatar_lx5wf6.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896610/398avatar_yt1ar9.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896610/399avatar_lc328u.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896614/400avatar_okqsct.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896614/401avatar_ax0owk.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896613/402avatar_k9prdh.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896614/403avatar_cfqz3v.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896616/404avatar_cy4ner.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896616/405avatar_v4x9o4.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896633/406avatar_grkkbv.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896639/407avatar_kz8pw0.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896635/408avatar_p4wpwc.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896635/409avatar_eaall6.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896636/410avatar_nz6uoj.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896636/411avatar_xzrcqx.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896637/412avatar_mrige1.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896638/413avatar_jpsipd.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896638/414avatar_xhxjd9.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896638/415avatar_gterf1.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896641/416avatar_cyndvh.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896639/417avatar_nhfjtl.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896640/418avatar_wvqja8.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896641/419avatar_fdxra2.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896660/420avatar_le5jsf.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896660/421avatar_jgbonp.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896659/422avatar_r5xooa.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896659/423avatar_acj9ze.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896660/424avatar_lrl6fo.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896666/425avatar_dsumne.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896662/426avatar_h5t9wr.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896663/427avatar_yu0y3m.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896664/428avatar_pjhoip.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896666/429avatar_cpatrk.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896665/430avatar_igfeiv.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896665/431avatar_exnojn.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896666/432avatar_mlmeiy.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896667/433avatar_mdq2nz.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896668/434avatar_w8uxgj.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896667/435avatar_jokbqj.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896669/436avatar_rfotwo.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896669/437avatar_piqnwq.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896689/438avatar_cbqdli.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896690/439avatar_qlyb6s.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896690/440avatar_o8leru.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896693/441avatar_c3wfql.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896692/442avatar_z5hnei.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896692/443avatar_vc6mva.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896694/444avatar_x2sot7.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896692/445avatar_gbbh4h.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896696/446avatar_wwciiy.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896695/447avatar_dymson.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896695/448avatar_rcrvae.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896697/449avatar_us9xme.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896697/450avatar_dznnrb.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896698/451avatar_fp0eh4.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896699/452avatar_rhff61.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896719/453avatar_jtdmph.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896719/454avatar_slaj0z.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896724/455avatar_pwsy3o.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896720/456avatar_laizkx.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896727/457avatar_tjaztt.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896731/458avatar_d9l6as.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896727/459avatar_si2gat.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896727/460avatar_kqpcnw.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896727/461avatar_qgj9k5.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896729/462avatar_ssphin.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896730/463avatar_qdaohb.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896730/464avatar_ux7ggb.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896733/465avatar_pefwxr.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896732/466avatar_u5qhrb.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896732/467avatar_a0ggp2.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896734/468avatar_ztcbrr.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896736/469avatar_yvttpx.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896737/470avatar_wi0kwx.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896736/471avatar_htiqwo.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896759/472avatar_ffxh3d.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896759/473avatar_tutx8y.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896759/474avatar_qpmu82.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896760/475avatar_amvgmi.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896759/476avatar_awving.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896760/477avatar_lehaub.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896760/478avatar_fpdeyj.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896762/479avatar_akeyjx.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896763/480avatar_uskuuu.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896762/481avatar_gnqmvr.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896763/482avatar_bsrazr.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896764/483avatar_tb6orq.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896764/484avatar_y9qztw.png"
     ];
     
     // Add avatar cards
@@ -2706,38 +3044,22 @@ function setupShop() {
         });
     });
     
-    // Add magic cards
-    magicImages.forEach((imageUrl, index) => {
-        allShopCards.push({
-            image: imageUrl,
-            category: "magic",
-            categoryName: "Magic",
-            color: "#9013FE",
-            name: `Magic ${index + 1}`
-        });
-    });
-    
-    // Add construct cards
-    constructImages.forEach((imageUrl, index) => {
-        allShopCards.push({
-            image: imageUrl,
-            category: "construct",
-            categoryName: "Construct",
-            color: "#F5A623",
-            name: `Construct ${index + 1}`
-        });
-    });
-    
-    // Add life cards
-    lifeImages.forEach((imageUrl, index) => {
-        allShopCards.push({
-            image: imageUrl,
-            category: "life",
-            categoryName: "Life",
-            color: "#7ED321",
-            name: `Life ${index + 1}`
-        });
-    });
+    // Add other categories using the folder structure
+    for (const [categoryId, category] of Object.entries(CARD_CATEGORIES)) {
+        if (categoryId === "avatar") continue; // Skip avatar since we already added them
+        
+        for (let i = 1; i <= category.count; i++) {
+            const imgUrl = `${category.folder}${i}${category.prefix}${IMAGE_EXT}`;
+            
+            allShopCards.push({
+                image: imgUrl,
+                category: categoryId,
+                categoryName: category.name,
+                color: category.color,
+                name: `${category.name} ${i}`
+            });
+        }
+    }
     
     filterShopCards('all');
 }
@@ -3832,18 +4154,18 @@ window.addEventListener('load', function() {
     updateCounters();
     initializeLifeZones();
     setupShop();
-    
-    // Add event listeners for overlay buttons
-    document.getElementById("addToDeckP1").onclick = () => addToDeck(1);
-    document.getElementById("addToDeckP2").onclick = () => addToDeck(2);
-    document.getElementById("playToBoard").onclick = playToBoard;
-    document.getElementById("moveToHand").onclick = moveToHand;
-    document.getElementById("moveToGY").onclick = moveToGY;
-    document.getElementById('addToP1DeckQty').onclick = () => addMultipleToDeck(1);
-    document.getElementById('addToP2DeckQty').onclick = () => addMultipleToDeck(2);
-    
-    showNotification("Game Loaded", "Click buttons to interact with the game!", 'success', 3000);
 });
+
+// ============================================================================
+// EVENT LISTENERS
+// ============================================================================
+document.getElementById("addToDeckP1").onclick = () => addToDeck(1);
+document.getElementById("addToDeckP2").onclick = () => addToDeck(2);
+document.getElementById("playToBoard").onclick = playToBoard;
+document.getElementById("moveToHand").onclick = moveToHand;
+document.getElementById("moveToGY").onclick = moveToGY;
+document.getElementById('addToP1DeckQty').onclick = () => addMultipleToDeck(1);
+document.getElementById('addToP2DeckQty').onclick = () => addMultipleToDeck(2);
 
 // ============================================================================
 // KEYBOARD SHORTCUTS
@@ -3894,4 +4216,3 @@ document.head.appendChild(style);
 </script>
 </body>
 </html>
-
