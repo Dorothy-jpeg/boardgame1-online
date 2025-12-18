@@ -1732,28 +1732,28 @@ const CARD_CATEGORIES = {
         name: "Avatar",
         folder: "Taling/Avatar/",
         prefix: "avatar",
-        count: 10, // Reduced for testing
+        count: 10, // Show 10 cards for testing
         color: "#4A90E2"
     },
     magic: {
         name: "Magic",
         folder: "Taling/Magic/",
         prefix: "magic",
-        count: 10, // Reduced for testing
+        count: 10, // Show 10 cards for testing
         color: "#9013FE"
     },
     construct: {
         name: "Construct",
         folder: "Taling/Construct/",
         prefix: "con",
-        count: 10, // Reduced for testing
+        count: 10, // Show 10 cards for testing
         color: "#F5A623"
     },
     life: {
         name: "Life",
         folder: "Taling/Life/",
         prefix: "life",
-        count: 10, // Reduced for testing
+        count: 10, // Show 10 cards for testing
         color: "#7ED321"
     }
 };
@@ -2639,18 +2639,105 @@ function setupShop() {
     const container = document.getElementById("shopCards");
     allShopCards = [];
     
-    // Generate sample cards for each category
-    for (const [categoryId, category] of Object.entries(CARD_CATEGORIES)) {
-        for (let i = 1; i <= Math.min(10, category.count); i++) {
-            allShopCards.push({
-                image: `https://via.placeholder.com/120x180/${category.color.replace('#', '')}/FFFFFF?text=${category.name}+${i}`,
-                category: categoryId,
-                categoryName: category.name,
-                color: category.color,
-                name: `${category.name} ${i}`
-            });
-        }
-    }
+    // AVATAR CARDS (10 cards for testing)
+    const avatarImages = [
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896378/1avatar_ampfsg.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896379/2avatar_l6w7zz.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896382/3avatar_dp4tls.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896384/4avatar_sjfduq.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896386/5avatar_sowfhm.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896388/6avatar_mk2iwh.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896390/7avatar_huq9gy.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896392/8avatar_ti9dxl.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896394/9avatar_brtzt7.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896396/10avatar_mpvd9f.png"
+    ];
+    
+    // MAGIC CARDS (10 cards for testing)
+    const magicImages = [
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765897113/1magic_onpgdy.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765897134/2magic_hpijvf.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765897143/3magic_gqoakj.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765897149/4magic_innpuy.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765897157/5magic_v9ohgl.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765897165/6magic_eniry3.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765897171/7magic_wamdez.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765897178/8magic_ael6cp.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765897185/9magic_h4shbb.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765897016/10magic_gslcmg.png"
+    ];
+    
+    // CONSTRUCT CARDS (10 cards for testing)
+    const constructImages = [
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896895/1con_h1npdk.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896939/2con_hvbqiu.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896937/3con_z9ojzf.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896937/4con_puhpfk.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896936/5con_rgydfl.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896937/6con_iuz0iy.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896937/7con_csclgh.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896939/8con_thxxn2.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896939/9con_nuz6kr.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896890/10con_uh7tlm.png"
+    ];
+    
+    // LIFE CARDS (10 cards for testing)
+    const lifeImages = [
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896943/1life_exd4ev.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896983/2life_xwrosr.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896998/3life_ltw553.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765897002/4life_nt9vkt.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765897002/5life_v2qrba.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765897003/6life_ekqim9.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765897006/7life_jgmhga.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765897004/8life_kxtquq.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765897003/9life_yoiyjd.png",
+        "https://res.cloudinary.com/dlkpniqxp/image/upload/v1765896940/10life_jmmbii.png"
+    ];
+    
+    // Add avatar cards
+    avatarImages.forEach((imageUrl, index) => {
+        allShopCards.push({
+            image: imageUrl,
+            category: "avatar",
+            categoryName: "Avatar",
+            color: "#4A90E2",
+            name: `Avatar ${index + 1}`
+        });
+    });
+    
+    // Add magic cards
+    magicImages.forEach((imageUrl, index) => {
+        allShopCards.push({
+            image: imageUrl,
+            category: "magic",
+            categoryName: "Magic",
+            color: "#9013FE",
+            name: `Magic ${index + 1}`
+        });
+    });
+    
+    // Add construct cards
+    constructImages.forEach((imageUrl, index) => {
+        allShopCards.push({
+            image: imageUrl,
+            category: "construct",
+            categoryName: "Construct",
+            color: "#F5A623",
+            name: `Construct ${index + 1}`
+        });
+    });
+    
+    // Add life cards
+    lifeImages.forEach((imageUrl, index) => {
+        allShopCards.push({
+            image: imageUrl,
+            category: "life",
+            categoryName: "Life",
+            color: "#7ED321",
+            name: `Life ${index + 1}`
+        });
+    });
     
     filterShopCards('all');
 }
@@ -3807,3 +3894,4 @@ document.head.appendChild(style);
 </script>
 </body>
 </html>
+
